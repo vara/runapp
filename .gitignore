@@ -1,0 +1,16 @@
+*.class
+*.log
+*.jar
+*~
+*.temp
+*~
+backups
+bin
+.swp
+target
+target-eclipse
+build
+.idea/
+private
+runapp.conf
+*.iml
