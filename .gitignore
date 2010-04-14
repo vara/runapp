@@ -14,3 +14,4 @@ build
 private
 runapp.conf
 *.iml
+*.o
