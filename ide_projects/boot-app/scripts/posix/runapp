@@ -1,4 +1,8 @@
 #!/bin/sh
+
+#Author Grzegorz (vara) Warywoda 
+#Since 14-04-2010 18:50:32
+
 #set -x
 set -o posix
 
@@ -23,7 +27,6 @@ debug(){
 }
 
 err(){
-
 	toconsole "${ERRCOLOR}ERROR:\033[m $1"
 }
 
