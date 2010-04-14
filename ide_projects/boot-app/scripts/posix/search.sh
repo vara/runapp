@@ -11,10 +11,25 @@ if test $# -eq 0 ; then
 	exit
 fi
 
+outs(){
+	echo -e "\t${1})${2}"	
+}
+
 for filename in `grep -rl "$2" $1` ; do
 	if test -e $filename ; then		
-		echo  "$filename"
-		echo `fgrep $filename -bHe "$2"`
+		echo  "------ Start parsing $filename ------"
+#str="`fgrep $filename -bHe "$2"`\n"
+		exec<$filename
+		currentRow=0;
+		while read -e line;	do
+			let currentRow++
+			line=`echo $line | grep -bHe "$2"`
+			
+			if [ -n "$line" ]; then
+				outs $currentRow "$line"
+			fi
+		done
+		echo  "------ Finished parsing $filename ------"
 	else
 		echo "Cannot find $filename"
 	fi
