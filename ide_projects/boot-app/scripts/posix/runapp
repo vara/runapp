@@ -53,25 +53,16 @@ parseFile() {
 		
 		while read -e line;	do
 
-			let currentRow++
+			((currentRow++))
 			
 			if [ "`expr substr "$line" 1 1`" != "$COMMENTCHAR" ];then
 			
 				case "$type" in
 					#This section parse and validate path to file stored in '$line'
 					"path")
-						local senv=`expr match "$line" '.*\(${.*}\)'`
-						if [ -n "$senv" ];then
-							local strLength=${#senv}
-							#we must cut proper value inside tags ${....}
-							#from index 2 -> ${
-							#number of characters to cut is the length of current string "senv" minus 3 (2first and 1last)
-							#After, resolve value stored in string 
-							local resolvedpath=$(getEnv ${senv:2:$strLength-3})
 
-							line=${line//$senv/$resolvedpath}
-							debug "line [$currentRow]:$line" 3
-						fi
+						line=`eval echo $line`
+						debug "Found path: $line" 3
 						
 						if [ -r "$line" ]; then 
 							echo -n "$line:"
@@ -96,17 +87,6 @@ parseFile() {
 
 	else warn "[$fileToRead] File Not found"
 	fi
-}
-
-getEnv(){
-	case "$1" in
-		PROJECT_DIR) echo $PROJECT_DIR
-		;;
-		M2_REPOSITORY) echo $M2_REPOSITORY
-		;;
-		*) echo $1
-		;;
-	esac 
 }
 
 resolve_symlink () {
@@ -257,4 +237,9 @@ esac
 debug "Execution Path: $EXECPATH"
 debug "Execution Parameters: $EXECARGS"
 debug "Main class: $MAINCLASS"
+
 exec $EXECPATH $EXECARGS
+# wait
+# echo "ide spac na 10sekunde"
+# sleep 5s
+# echo "Koniec spania"
