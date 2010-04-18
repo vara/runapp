@@ -15,3 +15,5 @@ private
 runapp.conf
 *.iml
 *.o
+out
+
