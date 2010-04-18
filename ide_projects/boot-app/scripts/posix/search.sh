@@ -12,7 +12,7 @@ if test $# -eq 0 ; then
 fi
 
 outs(){
-	echo -e "\t${1})${2}"	
+	echo -e "\t${currentRow})${2}"	
 }
 
 for filename in `grep -rl "$2" $1` ; do
@@ -26,7 +26,7 @@ for filename in `grep -rl "$2" $1` ; do
 			line=`echo $line | grep -bHe "$2"`
 			
 			if [ -n "$line" ]; then
-				outs $currentRow "$line"
+				outs $line
 			fi
 		done
 		echo  "------ Finished parsing $filename ------"
