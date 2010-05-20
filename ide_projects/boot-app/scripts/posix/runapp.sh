@@ -121,41 +121,48 @@ checkJava(){
 		if [ -z "$JRE_HOME" ]; then 
 			debug "Variable enviroment \$JRE_HOME not found." 3
 			
-			case "`uname`" in
-				Darwin*)
-		#         jdkhome="/System/Library/Frameworks/JavaVM.framework/Versions/1.5/Home"
-		#         java_bin=`which java 2>&1`
-		#         if [ $? -ne 0 ] || [ -n "`echo \"$java_bin\" | grep \"no java in\"`" ] ; then
-		# # no java in path... strange
-		#             java_bin=/usr/bin/java
-		#         fi
-		#         if [ -f "$java_bin" ] ; then
-		#             java_version=`"$java_bin" -fullversion 2>&1`
-		#             if [ $? -eq 0 ] && [ -n "`echo \"$java_version\" | grep 1.6.0`" ] ; then
-		# # don`t use Developer Preview versions
-		#                 if [ -z "`echo \"$java_version\" | grep \"1.6.0_b\|1.6.0-b\|1.6.0_01\|1.6.0_04\|-dp\"`" ] ; then
-		#                     if [ -f "/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home/bin/java" ] ; then
-		#                         jdkhome="/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home"
-		#                     elif [ -f "/System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home/bin/java" ] ; then
-		#                         jdkhome="/System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home"
-		#                     fi
-		#                 fi
-		#             fi
-		#         fi
-				;;
-				*) 
-					local java=`which java`
-					if [ -n "$java" ] ; then
-						java=`resolve_symlink "$java"`
-						debug "Resolved symlink for java '$java'" 3
-						JAVA_BIN=$java
-					else
-						debug ""
-					fi
-					
-				;;
-			esac
+			if [ -z "$JDK_HOME" ]; then 
+				debug "Variable enviroment \$JDK_HOME not found." 3
 			
+				case "`uname`" in
+					Darwin*)
+			#         jdkhome="/System/Library/Frameworks/JavaVM.framework/Versions/1.5/Home"
+			#         java_bin=`which java 2>&1`
+			#         if [ $? -ne 0 ] || [ -n "`echo \"$java_bin\" | grep \"no java in\"`" ] ; then
+			# # no java in path... strange
+			#             java_bin=/usr/bin/java
+			#         fi
+			#         if [ -f "$java_bin" ] ; then
+			#             java_version=`"$java_bin" -fullversion 2>&1`
+			#             if [ $? -eq 0 ] && [ -n "`echo \"$java_version\" | grep 1.6.0`" ] ; then
+			# # don`t use Developer Preview versions
+			#                 if [ -z "`echo \"$java_version\" | grep \"1.6.0_b\|1.6.0-b\|1.6.0_01\|1.6.0_04\|-dp\"`" ] ; then
+			#                     if [ -f "/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home/bin/java" ] ; then
+			#                         jdkhome="/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home"
+			#                     elif [ -f "/System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home/bin/java" ] ; then
+			#                         jdkhome="/System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home"
+			#                     fi
+			#                 fi
+			#             fi
+			#         fi
+					;;
+					*) 
+						local java=`which java`
+						if [ -n "$java" ] ; then
+							java=`resolve_symlink "$java"`
+							debug "Resolved symlink for java '$java'" 3
+							JAVA_BIN=$java
+						else
+							debug ""
+						fi
+						
+					;;
+				esac
+				
+			else
+				debug "JDK_HOME viarable is set to :"$JDK_HOME 3
+				JAVA_BIN="$JDK_HOME/bin/java"
+			fi
 		else
 			debug "JRE_HOME viarable is set to :"$JRE_HOME 3
 			JAVA_BIN="$JRE_HOME/bin/java"
@@ -182,21 +189,7 @@ checkJava(){
 #                                     #
 #######################################
 
-readConfig
-
 DEBUG=${DEBUG:-0}
-PROJECT_DIR=${PROJECT_DIR:-`pwd`}
-M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
-COMMENTCHAR=${COMMENTCHAR:-"#"}
-WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
-
-echo $DEBUG | grep "[^0-9]" > /dev/null 2>&1	
-if [ "$?" -eq "0" ]; then	
-	warn "Sorry, 'DEBUG=$DEBUG' - variable must be positive number. Try 'export DEBUG=1'. For this instance 'DEBUG' will be set to 0."
-	DEBUG=0
-fi
-
-checkJava
 
 SCRIPT_LOCATION=$0
 # Step through symlinks to find where the script really is
@@ -206,12 +199,34 @@ done
 
 SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 
-#added this when script moved to global loaction /usr/bin.
-#comment this when script is in directory with configuration files
-SCRIPT_HOME=`pwd`
+PROJECT_DIR=${PROJECT_DIR:-`pwd`}
 
-DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$SCRIPT_HOME/runapp.dep"}
-JVM_ARGS_FILE=${JVM_ARGS_FILE:-"$SCRIPT_HOME/runapp.jvmargs"}
+if [ -d "$PROJECT_DIR" ]; then
+
+	PROJECT_DIR=`readlink -e "$PROJECT_DIR"` > /dev/null 2>&1
+	cd $PROJECT_DIR
+else
+	warn "Variable PROJECT_DIR '$PROJECT_DIR' is not path to directory. Configuration files will be ignored."	
+fi
+
+M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
+COMMENTCHAR=${COMMENTCHAR:-"#"}
+WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
+
+readConfig
+
+debug "PROJECT_DIR=$PROJECT_DIR" 3
+
+echo $DEBUG | grep "[^0-9]" > /dev/null 2>&1	
+if [ "$?" -eq "0" ]; then	
+	warn "Sorry, 'DEBUG=$DEBUG' - variable must be positive number. Try 'export DEBUG=1'. For this instance 'DEBUG' will be set to 0."
+	DEBUG=0
+fi
+
+checkJava
+
+DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$PROJECT_DIR/runapp.dep"}
+JVM_ARGS_FILE=${JVM_ARGS_FILE:-"$PROJECT_DIR/runapp.jvmargs"}
 
 if [ -z "$MAINCLASS" ]; then
   err "Main class not found. Please set 'MAINCLASS' variable."
