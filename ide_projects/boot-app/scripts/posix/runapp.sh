@@ -67,12 +67,12 @@ parseFile() {
 			
 			if [ "`expr substr "$line" 1 1`" != "$COMMENTCHAR" ];then
 			
+				line=`eval echo $line`
+				debug "[$currentRow]Resolved line: $line" 3
+				
 				case "$type" in
 					#This section parse and validate path to file stored in '$line'
 					"path")
-
-						line=`eval echo $line`
-						debug "Found path: $line" 3
 						
 						if [ -r "$line" ]; then 
 							echo -n "$line:"
