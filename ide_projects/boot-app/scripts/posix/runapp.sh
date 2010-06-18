@@ -35,7 +35,7 @@ readConfig(){
 	if [ -r $configName ];then
 		. $configName
 	else
-		debug "Config file '$configName' not exist"  2
+		warn "Config file '$configName' not exist"
 	fi
 }
 
@@ -59,7 +59,7 @@ parseFile() {
 	if [ -e $fileToRead ];then
 		exec<$fileToRead
 
-		debug "Prepare parse $fileToRead file. [type:$type]" 
+		debug "Prepare parse $fileToRead file. [type:$type]" 3
 		
 		while read -e line;	do
 
@@ -68,7 +68,7 @@ parseFile() {
 			if [ "`expr substr "$line" 1 1`" != "$COMMENTCHAR" ];then
 			
 				line=`eval echo $line`
-				debug "[$currentRow]Resolved line: $line" 3
+				debug "[$currentRow]Resolved line: $line" 4
 				
 				case "$type" in
 					#This section parse and validate path to file stored in '$line'
@@ -77,7 +77,7 @@ parseFile() {
 						if [ -r "$line" ]; then 
 							echo -n "$line:"
 						else 
-							debug "[$currentRow]Can't read from '$line', ignore it !" 2
+							debug "[$currentRow]Can't read from '$line', ignore it !" 4
 						fi
 					;;
 					"args")
@@ -89,11 +89,11 @@ parseFile() {
 					;;
 				esac
 			else
-				debug "[$currentRow]Commented line:$line" 2
+				debug "[$currentRow]Commented line:$line" 3
 			fi
 		done
 
-		debug "Finished" 2
+		debug "Finished" 3
 
 	else warn "[$fileToRead] File Not found"
 	fi
@@ -183,6 +183,12 @@ checkJava(){
 
 }
 
+checkExistsFile(){
+  if [ ! -f "$1" ]; then
+	warn "File $1 not exists"
+  fi
+}
+
 #######################################
 #                                     #
 # This is Entry point for this script #
@@ -191,23 +197,35 @@ checkJava(){
 
 DEBUG=${DEBUG:-0}
 
+STARTER="java" #HARD CODE FIXME: after implement maven boot util
+
 SCRIPT_LOCATION=$0
 # Step through symlinks to find where the script really is
 while [ -L "$SCRIPT_LOCATION" ]; do
   SCRIPT_LOCATION=`readlink -e "$SCRIPT_LOCATION"`
 done
-
 SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
+########################################
+
+# Try resolve project directory
+if [ -d "$1" ]; then
+	PROJECT_DIR=$1
+	shift
+fi
 
 PROJECT_DIR=${PROJECT_DIR:-`pwd`}
 
 if [ -d "$PROJECT_DIR" ]; then
 
 	PROJECT_DIR=`readlink -e "$PROJECT_DIR"` > /dev/null 2>&1
-	cd $PROJECT_DIR
+	
+	if [ "$PROJECT_DIR" != `pwd` ]; then
+	  cd $PROJECT_DIR
+	fi
 else
-	warn "Variable PROJECT_DIR '$PROJECT_DIR' is not path to directory. Configuration files will be ignored."	
+	warn "Variable PROJECT_DIR '$PROJECT_DIR' is not path to directory. Configuration files will be ignore."	
 fi
+########################################
 
 M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
 COMMENTCHAR=${COMMENTCHAR:-"#"}
@@ -228,6 +246,9 @@ checkJava
 DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$PROJECT_DIR/runapp.dep"}
 JVM_ARGS_FILE=${JVM_ARGS_FILE:-"$PROJECT_DIR/runapp.jvmargs"}
 
+(checkExistsFile $DEPENDENCY_FILE)
+(checkExistsFile $JVM_ARGS_FILE)
+
 if [ -z "$MAINCLASS" ]; then
   err "Main class not found. Please set 'MAINCLASS' variable."
   exit 3
@@ -237,9 +258,8 @@ CLASSPATH=$(parseFile $DEPENDENCY_FILE "path")
 debug "CLASSPATH:$CLASSPATH" 3
 
 JVM_ARGS=$(parseFile $JVM_ARGS_FILE "args")
-debug "JVMARGS:$JVM_ARGS" 3
 
-case "$1" in
+case "$STARTER" in
     java)
 		shift
 		EXECPATH="$JAVA_BIN"	
@@ -258,13 +278,16 @@ case "$1" in
 		#mvn -e --no-plugin-updates --batch-mode -cp .:$CLASSPATH -Dexec.args=$@ exec:java -Dexec.mainClass=$MAINCLASS
     ;;
     *)
-		echo "Usage: $0 [java,maven] [parameters to pass to the application]"
+		echo "Usage: $0 [root-directory (optional) ] [java|maven] [parameters to pass to the application]"
 		exit 1
 esac
 
 debug "Execution Path: $EXECPATH"
-debug "Execution Parameters: $EXECARGS"
+debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
+
+#Too huge string
+#debug "Execution Parameters: $EXECARGS"
 
 eval $EXECPATH $EXECARGS '&'
 PID=$!
