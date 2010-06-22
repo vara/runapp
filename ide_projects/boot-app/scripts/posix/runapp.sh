@@ -1,13 +1,22 @@
 #!/bin/sh
 
+#
 #Author Grzegorz (vara) Warywoda 
 #Since 14-04-2010 18:50:32
+#
 
 #set -x
 set -o posix
 
+readonly VERSION=1.0.0
+readonly AUTHOR="Grzegorz Warywoda"
+
 DEBUGCOLOR='\033[32m'
 ERRCOLOR='\033[31m'
+
+printVersion(){
+  toconsole "runapp ver. $VERSION"
+}
 
 toconsole(){	
 	echo -e >&2 $1	
@@ -113,6 +122,11 @@ resolve_symlink () {
     echo "$file"
 }
 
+#
+# Resolve path to java binary file. If path has not been found 
+# then script will exit.
+#
+
 checkJava(){
 
 	if [ -z "$JAVA_HOME" ]; then
@@ -183,10 +197,17 @@ checkJava(){
 
 }
 
+#
+#check whether the file exists, if not print the warning.
+#
 checkExistsFile(){
   if [ ! -f "$1" ]; then
 	warn "File $1 not exists"
   fi
+}
+
+printUsage(){
+  echo -e "Usage:\n\t $0 [root-directory (optional) ] [java|maven] -- [parameters to pass to the application]"
 }
 
 #######################################
@@ -207,11 +228,43 @@ done
 SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 ########################################
 
-# Try resolve project directory
-if [ -d "$1" ]; then
-	PROJECT_DIR=$1
-	shift
-fi
+#Parse input argumnets
+
+for symbol  in  $@ ; do
+  
+  debug "Parse argument '$symbol'" 3
+  case "$symbol" in
+    --)
+		shift
+		break
+    ;;
+    -h|--help)
+		printUsage
+		exit 0
+	;;
+	-v|--version)
+		printVersion
+		exit 0
+	;;
+	java|maven)
+
+		STARTER=$symbol
+		shift
+	;;
+	*)
+		# Try resolve project directory
+		if [ -d "$1" ]; then
+			PROJECT_DIR=$1
+			shift
+		fi
+		
+	esac  
+done
+
+USER_ARGS_TO_APP="$*"
+
+
+########################################
 
 PROJECT_DIR=${PROJECT_DIR:-`pwd`}
 
@@ -261,30 +314,32 @@ JVM_ARGS=$(parseFile $JVM_ARGS_FILE "args")
 
 case "$STARTER" in
     java)
-		shift
+		
 		EXECPATH="$JAVA_BIN"	
 		EXECARGS=$JVM_ARGS
 		
 		if [ -n "$CLASSPATH" ];then 
 			EXECARGS="$EXECARGS -cp $CLASSPATH"
 		fi
-		EXECARGS="$EXECARGS $MAINCLASS $*"
+		EXECARGS="$EXECARGS $MAINCLASS $USER_ARGS_TO_APP"
     ;;
     maven)
-    	shift
+    	
     	export MAVEN_OPTS=$JVM_ARGS
     	EXECPATH="mvn"
     	EXECARGS="-e --no-plugin-updates --batch-mode -Dexec.args=$* exec:java -Dexec.mainClass=$MAINCLASS"
 		#mvn -e --no-plugin-updates --batch-mode -cp .:$CLASSPATH -Dexec.args=$@ exec:java -Dexec.mainClass=$MAINCLASS
     ;;
     *)
-		echo "Usage: $0 [root-directory (optional) ] [java|maven] [parameters to pass to the application]"
-		exit 1
+		warn "Unrecongnized starter '$STARTER'."
+		printUsage
+		exit 0
 esac
 
 debug "Execution Path: $EXECPATH"
 debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
+debug "User args: $USER_ARGS_TO_APP"
 
 #Too huge string
 #debug "Execution Parameters: $EXECARGS"
