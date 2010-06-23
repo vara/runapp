@@ -14,17 +14,35 @@ readonly AUTHOR="Grzegorz Warywoda"
 DEBUGCOLOR='\033[32m'
 ERRCOLOR='\033[31m'
 
+#
+##Print version for this release
+#
 printVersion(){
-  toconsole "runapp ver. $VERSION"
+  toconsole "$AUTHOR \nrunapp ver. $VERSION"
 }
+
+#
+##Print mesasge saving in first argument.
+#
 
 toconsole(){	
 	echo -e >&2 $1	
 }
 
+#
+## Print warning on the console. Function takes one argument who adopt text message
+#
 warn(){
 	toconsole "WARNING: $1"
 }
+
+#
+## Function for debug output. First argument is the text message 
+## printed on the console. Second argumnet is the level representing by integer number
+## assosiated to this message.
+## If the level (second arg.) is less then global variable 'DEBUG' 
+## then this message will not appear on console.
+#
 
 debug(){
 	if [ "$DEBUG" -gt "0" ]; then
@@ -107,6 +125,10 @@ parseFile() {
 	else warn "[$fileToRead] File Not found"
 	fi
 }
+
+#
+## Function resolve path from '~/' to '/home/$USER_NAME/'
+#
 
 resolve_symlink () {
     local file="$1"
@@ -210,6 +232,7 @@ printUsage(){
   echo -e "Usage:\n\t $0 [root-directory (optional) ] [java|maven] -- [parameters to pass to the application]"
 }
 
+
 #######################################
 #                                     #
 # This is Entry point for this script #
@@ -226,13 +249,12 @@ while [ -L "$SCRIPT_LOCATION" ]; do
   SCRIPT_LOCATION=`readlink -e "$SCRIPT_LOCATION"`
 done
 SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
+
 ########################################
-
 #Parse input argumnets
-
 for symbol  in  $@ ; do
   
-  debug "Parse argument '$symbol'" 3
+  debug "Parse argument '$symbol'" 2
   case "$symbol" in
     --)
 		shift
@@ -251,18 +273,36 @@ for symbol  in  $@ ; do
 		STARTER=$symbol
 		shift
 	;;
+	--debug|-d)
+		shift
+		DEBUG=$1
+		shift
+	;;
+	--debug=*|-d=*)
+		warn "Combine parameter not supported yet !"
+		shift
+	;;
 	*)
-		# Try resolve project directory
-		if [ -d "$1" ]; then
-			PROJECT_DIR=$1
-			shift
+		# Try resolve path to project directory
+		if [ ! -n "$absolute_path" ]; then
+			debug "Try resolve path '$1'"
+			absolute_path=$(eval echo -e "$1")
+		  
+			if [ -d "$absolute_path" ]; then
+				PROJECT_DIR=$absolute_path
+			else
+				warn "'$1' is not a directory."
+				absolute_path="" #clear variable if is not a path
+			fi
+		else
+			warn "Detected attempt to overide variable PROJECT_DIR by '$1'. Operation not permited."
 		fi
 		
+		shift
 	esac  
 done
 
 USER_ARGS_TO_APP="$*"
-
 
 ########################################
 
@@ -278,6 +318,7 @@ if [ -d "$PROJECT_DIR" ]; then
 else
 	warn "Variable PROJECT_DIR '$PROJECT_DIR' is not path to directory. Configuration files will be ignore."	
 fi
+
 ########################################
 
 M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
@@ -286,13 +327,13 @@ WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
 
 readConfig
 
-debug "PROJECT_DIR=$PROJECT_DIR" 3
-
 echo $DEBUG | grep "[^0-9]" > /dev/null 2>&1	
 if [ "$?" -eq "0" ]; then	
 	warn "Sorry, 'DEBUG=$DEBUG' - variable must be positive number. Try 'export DEBUG=1'. For this instance 'DEBUG' will be set to 0."
 	DEBUG=0
 fi
+
+debug "PROJECT_DIR=$PROJECT_DIR" 3
 
 checkJava
 
