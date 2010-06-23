@@ -45,6 +45,7 @@ warn(){
 #
 
 debug(){
+
 	if [ "$DEBUG" -gt "0" ]; then
 		local level=${2:-1}
 		if [ "$level" -le "$DEBUG" ]; then
@@ -126,10 +127,6 @@ parseFile() {
 	fi
 }
 
-#
-## Function resolve path from '~/' to '/home/$USER_NAME/'
-#
-
 resolve_symlink () {
     local file="$1"
     while [ -h "$file" ]; do
@@ -186,7 +183,7 @@ checkJava(){
 						local java=`which java`
 						if [ -n "$java" ] ; then
 							java=`resolve_symlink "$java"`
-							debug "Resolved symlink for java '$java'" 3
+							debug "Resolved symlink for java is '$java'" 3
 							JAVA_BIN=$java
 						else
 							debug ""
@@ -216,7 +213,6 @@ checkJava(){
 	fi
 	
 	debug "java bin has been resolved properly and was set to "${JAVA_BIN} 2
-
 }
 
 #
@@ -250,13 +246,14 @@ while [ -L "$SCRIPT_LOCATION" ]; do
 done
 SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 
-########################################
-#Parse input argumnets
+#########################
+## Parse input argumnets
+#
 for symbol  in  $@ ; do
   
   debug "Parse argument '$symbol'" 2
   case "$symbol" in
-    --)
+    "--")
 		shift
 		break
     ;;
@@ -274,9 +271,8 @@ for symbol  in  $@ ; do
 		shift
 	;;
 	--debug|-d)
-		shift
-		DEBUG=$1
-		shift
+		DEBUG=$2
+		shift 2
 	;;
 	--debug=*|-d=*)
 		warn "Combine parameter not supported yet !"
@@ -285,20 +281,20 @@ for symbol  in  $@ ; do
 	*)
 		# Try resolve path to project directory
 		if [ ! -n "$absolute_path" ]; then
-			debug "Try resolve path '$1'"
-			absolute_path=$(eval echo -e "$1")
+			debug "Try resolve path '$symbol'"
+			absolute_path=$(eval echo -e "$symbol")
 		  
 			if [ -d "$absolute_path" ]; then
 				PROJECT_DIR=$absolute_path
+				shift
 			else
-				warn "'$1' is not a directory."
+				warn "'$symbol' is not a directory."
 				absolute_path="" #clear variable if is not a path
 			fi
 		else
-			warn "Detected attempt to overide variable PROJECT_DIR by '$1'. Operation not permited."
+			warn "Detected attempt to overide variable PROJECT_DIR by '$symbol'. Operation not permited."
 		fi
 		
-		shift
 	esac  
 done
 
@@ -333,7 +329,7 @@ if [ "$?" -eq "0" ]; then
 	DEBUG=0
 fi
 
-debug "PROJECT_DIR=$PROJECT_DIR" 3
+debug "PROJECT_DIR=$PROJECT_DIR" 1
 
 checkJava
 
@@ -377,6 +373,7 @@ case "$STARTER" in
 		exit 0
 esac
 
+debug "`$JAVA_BIN -fullversion 2>&1`"
 debug "Execution Path: $EXECPATH"
 debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
