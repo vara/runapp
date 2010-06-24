@@ -1,2 +1,4 @@
 ${M2_REPOSITORY}/jklipper/jklipper.utils/1.0.0/jklipper.utils-1.0.0.jar
 ${M2_REPOSITORY}/log4j/log4j/1.2.14/log4j-1.2.14.jar
+${M2_REPOSITORY}/org/slf4j/slf4j-api/1.6.0/slf4j-api-1.6.0.jar
+${M2_REPOSITORY}/org/slf4j/slf4j-log4j12/1.6.0/slf4j-log4j12-1.6.0.jar
