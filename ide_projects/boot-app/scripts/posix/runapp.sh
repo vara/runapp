@@ -1,8 +1,8 @@
 #!/bin/sh
 
 #
-#Author Grzegorz (vara) Warywoda 
-#Since 14-04-2010 18:50:32
+## Author: Grzegorz (vara) Warywoda 
+## Since: 14-04-2010 18:50:32
 #
 
 #set -x
@@ -15,14 +15,14 @@ DEBUGCOLOR='\033[32m'
 ERRCOLOR='\033[31m'
 
 #
-##Print version for this release
+## Print version for this release
 #
 printVersion(){
   toconsole "$AUTHOR \nrunapp ver. $VERSION"
 }
 
 #
-##Print mesasge saving in first argument.
+## Print mesasge saving in first argument.
 #
 
 toconsole(){	
@@ -43,7 +43,6 @@ warn(){
 ## If the level (second arg.) is less then global variable 'DEBUG' 
 ## then this message will not appear on console.
 #
-
 debug(){
 
 	if [ "$DEBUG" -gt "0" ]; then
@@ -77,6 +76,16 @@ exitScript(){
 	exit $exitcode
 }
 
+#
+## Parse config files
+## Sequentially input arguments are:
+## -path to file containg configuration stuff 
+## -type of configuration. Distinguish two of config. types
+##		1. with dependency paths. Recommend the use of relative paths by using global variables
+##			as well as in shell scripts eg. ${prefix_for_path}/jam_lasica/
+##		2. with line by line arguments. Each line is redirected to application in raw format.
+##	Function return a string of chars where each line is separeted by space char ' '.
+#
 parseFile() {
 	
 	local fileToRead=$1	
@@ -142,10 +151,9 @@ resolve_symlink () {
 }
 
 #
-# Resolve path to java binary file. If path has not been found 
-# then script will exit.
+## Resolve path to java binary file. If path has not been found 
+## then script will exit.
 #
-
 checkJava(){
 
 	if [ -z "$JAVA_HOME" ]; then
@@ -216,7 +224,7 @@ checkJava(){
 }
 
 #
-#check whether the file exists, if not print the warning.
+## Check whether the file exists, if not print the warning.
 #
 checkExistsFile(){
   if [ ! -f "$1" ]; then
@@ -280,6 +288,13 @@ for symbol  in  $@ ; do
 	;;
 	*)
 		# Try resolve path to project directory
+		# NOTE: Only once we allow to define variable PROJECT_DIR.
+		# 		Any further appeal will be ignoring. 
+		#		eg. runapp /path1/ ... /path2/ ...
+		#			"/path1/" will be assigned to PROJECT_DIR.
+		#		eq, runapp /broken_path_to__dir_or_file ... /path2 ...
+		#			"/path2" will be assigned to PROJECT_DIR.
+		#		
 		if [ ! -n "$absolute_path" ]; then
 			debug "Try resolve path '$symbol'"
 			absolute_path=$(eval echo -e "$symbol")
@@ -336,8 +351,8 @@ checkJava
 DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$PROJECT_DIR/runapp.dep"}
 JVM_ARGS_FILE=${JVM_ARGS_FILE:-"$PROJECT_DIR/runapp.jvmargs"}
 
-(checkExistsFile $DEPENDENCY_FILE)
-(checkExistsFile $JVM_ARGS_FILE)
+#(checkExistsFile $DEPENDENCY_FILE)
+#(checkExistsFile $JVM_ARGS_FILE)
 
 if [ -z "$MAINCLASS" ]; then
   err "Main class not found. Please set 'MAINCLASS' variable."
@@ -386,9 +401,22 @@ eval $EXECPATH $EXECARGS '&'
 PID=$!
 debug "Created new process with PID:$PID."
 
+#
+## Set hook (intercept) for EXIT interrupt (from shell sent directly by ctrl+x).
+#
 trap "kill $PID" EXIT
+
+#
+## Wait for Punisher
+#
 wait $PID
 exitcode=$?
+
+#
+## If application has been closed normaly (without any external influence)
+## then we dont have what do kill ... clear action asigned to EXIT interrupt.
+#
 trap '' EXIT
+
 debug "Application completed work ! [exitcode:$exitcode]"
 exitScript
