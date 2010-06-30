@@ -58,7 +58,7 @@ err(){
 }
 
 readConfig(){
-	local configName="`pwd`/runapp.conf"
+	local configName="`pwd`/$CONFIG_FILE_NAME"
 	if [ -r $configName ];then
 		. $configName
 	else
@@ -229,7 +229,9 @@ checkJava(){
 checkExistsFile(){
   if [ ! -f "$1" ]; then
 	warn "File $1 not exists"
+	echo "0"
   fi
+  echo "1"
 }
 
 printUsage(){
@@ -244,6 +246,7 @@ printUsage(){
 #######################################
 
 DEBUG=${DEBUG:-0}
+CONFIG_FILE_NAME=${CONFIG_FILE_NAME:-"runapp.conf"}
 
 STARTER="java" #HARD CODE FIXME: after implement maven boot util
 
@@ -262,14 +265,17 @@ for symbol  in  $@ ; do
   debug "Parse argument '$symbol'" 2
   case "$symbol" in
     "--")
+    
 		shift
 		break
     ;;
     -h|--help)
+    
 		printUsage
 		exit 0
 	;;
 	-v|--version)
+	
 		printVersion
 		exit 0
 	;;
@@ -279,11 +285,26 @@ for symbol  in  $@ ; do
 		shift
 	;;
 	--debug|-d)
+	
 		DEBUG=$2
 		shift 2
 	;;
 	--debug=*|-d=*)
+	
 		warn "Combine parameter not supported yet !"
+		shift
+	;;
+	--conf|-c)
+	
+ 		tmpFilePath=$(eval echo -e "$2")
+		if [  -f "$tmpFilePath" ]; then
+		  
+		  CONFIG_FILE_NAME=$tmpFilePath
+		  toconsole "CONFIG_FILE_NAME set to '$CONFIG_FILE_NAME'"
+		  shift 
+		else
+			warn "File '$tmpFilePath' not exists"
+		fi
 		shift
 	;;
 	*)
@@ -351,8 +372,6 @@ checkJava
 DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$PROJECT_DIR/runapp.dep"}
 JVM_ARGS_FILE=${JVM_ARGS_FILE:-"$PROJECT_DIR/runapp.jvmargs"}
 
-#(checkExistsFile $DEPENDENCY_FILE)
-#(checkExistsFile $JVM_ARGS_FILE)
 
 if [ -z "$MAINCLASS" ]; then
   err "Main class not found. Please set 'MAINCLASS' variable."
