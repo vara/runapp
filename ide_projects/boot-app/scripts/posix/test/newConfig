@@ -1,0 +1,3 @@
+MAINCLASS="test"
+M2_REPOSITORY="${HOME}/.m2/repository"
+DEBUG=5
