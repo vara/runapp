@@ -34,6 +34,10 @@ toconsole(){
 #
 warn(){
 	toconsole "WARNING: $1"
+
+#Not implemented yet
+#	notify $1 
+
 }
 
 #
@@ -55,6 +59,7 @@ debug(){
 
 err(){
 	toconsole "${ERRCOLOR}ERROR:\033[m $1"
+	notify $1
 }
 
 readConfig(){
@@ -257,6 +262,11 @@ while [ -L "$SCRIPT_LOCATION" ]; do
 done
 SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 
+##################
+##load lib notify
+#
+#. $SCRIPT_HOME/notify.sh
+
 #########################
 ## Parse input argumnets
 #
@@ -310,10 +320,10 @@ for symbol  in  $@ ; do
 	*)
 		# Try resolve path to project directory
 		# NOTE: Only once we allow to define variable PROJECT_DIR.
-		# 		Any further appeal will be ignoring. 
+		#		Any further appeal will be ignoring. 
 		#		eg. runapp /path1/ ... /path2/ ...
 		#			"/path1/" will be assigned to PROJECT_DIR.
-		#		eq, runapp /broken_path_to__dir_or_file ... /path2 ...
+		#		eg. runapp /broken_path_to__dir_or_file ... /path2 ...
 		#			"/path2" will be assigned to PROJECT_DIR.
 		#		
 		if [ ! -n "$absolute_path" ]; then
