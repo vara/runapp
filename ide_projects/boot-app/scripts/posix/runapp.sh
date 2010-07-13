@@ -18,7 +18,7 @@ ERRCOLOR='\033[31m'
 ## Print version for this release
 #
 printVersion(){
-  toconsole "$AUTHOR \nrunapp ver. $VERSION"
+  toconsole "Author: $AUTHOR \nrunapp v$VERSION"
 }
 
 #
@@ -240,7 +240,8 @@ checkExistsFile(){
 }
 
 printUsage(){
-  echo -e "Usage:\n\t $0 [root-directory (optional) ] [java|maven] -- [parameters to pass to the application]"
+#TODO:Make better description
+  echo -e "Usage:\n\t $0 [root-directory (optional) ] [java|maven](optional,default java) [--] [parameters to pass to the application]"
 }
 
 
