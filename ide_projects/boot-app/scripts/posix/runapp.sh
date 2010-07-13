@@ -9,7 +9,8 @@
 set -o posix
 
 readonly VERSION=1.0.0
-readonly AUTHOR="Grzegorz Warywoda"
+readonly AUTHOR="Grzegorz (vara) Warywoda"
+readonly CONTACT="grzegorz.warywoda@verkonwsys.com"
 
 DEBUGCOLOR='\033[32m'
 ERRCOLOR='\033[31m'
@@ -18,7 +19,7 @@ ERRCOLOR='\033[31m'
 ## Print version for this release
 #
 printVersion(){
-  toconsole "Author: $AUTHOR \nrunapp v$VERSION"
+  toconsole "Author: $AUTHOR\nContact: $CONTACT\nrunapp v$VERSION"
 }
 
 #
@@ -251,6 +252,12 @@ printUsage(){
 #                                     #
 #######################################
 
+#
+## Run script in testing mode. 
+## Don't run external application, just run only script and exit.
+#
+TESTING=${TESTING:-0}
+
 DEBUG=${DEBUG:-0}
 CONFIG_FILE_NAME=${CONFIG_FILE_NAME:-"runapp.conf"}
 
@@ -280,7 +287,7 @@ for symbol  in  $@ ; do
 		shift
 		break
     ;;
-    -h|--help)
+    -h|--help|-?)
     
 		printUsage
 		exit 0
@@ -318,6 +325,10 @@ for symbol  in  $@ ; do
 		fi
 		shift
 	;;
+	--testingMode|-tm)
+		TESTING=1
+		shift
+	;;
 	*)
 		# Try resolve path to project directory
 		# NOTE: Only once we allow to define variable PROJECT_DIR.
@@ -351,9 +362,7 @@ USER_ARGS_TO_APP="$*"
 
 PROJECT_DIR=${PROJECT_DIR:-`pwd`}
 
-if [ -d "$PROJECT_DIR" ]; then
-
-	PROJECT_DIR=`readlink -e "$PROJECT_DIR"` > /dev/null 2>&1
+if [ -d "$PROJECT_DIR" ]; then PROJECT_DIR=`readlink -e "$PROJECT_DIR"` > /dev/null 2>&1
 	
 	if [ "$PROJECT_DIR" != `pwd` ]; then
 	  cd $PROJECT_DIR
@@ -369,6 +378,10 @@ COMMENTCHAR=${COMMENTCHAR:-"#"}
 WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
 
 readConfig
+
+if [ "$TESTING" -gt "0" ]; then  warn "Script running in testing mode !"
+  if [ "$WAIT_ON_EXIT" -le "0" ]; then WAIT_ON_EXIT=2; fi
+fi
 
 echo $DEBUG | grep "[^0-9]" > /dev/null 2>&1	
 if [ "$?" -eq "0" ]; then	
@@ -424,29 +437,32 @@ debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
 debug "User args: $USER_ARGS_TO_APP"
 
-#Too huge string
-#debug "Execution Parameters: $EXECARGS"
+if [ "$TESTING" -le "0" ]; then
 
-eval $EXECPATH $EXECARGS '&'
-PID=$!
-debug "Created new process with PID:$PID."
+	#Too huge string
+	#debug "Execution Parameters: $EXECARGS"
 
-#
-## Set hook (intercept) for EXIT interrupt (from shell sent directly by ctrl+x).
-#
-trap "kill $PID" EXIT
+	eval $EXECPATH $EXECARGS '&'
+	PID=$!
+	debug "Created new process with PID:$PID."
 
-#
-## Wait for Punisher
-#
-wait $PID
-exitcode=$?
+	#
+	## Set hook (intercept) for EXIT interrupt (from shell sent directly by ctrl+x).
+	#
+	trap "kill $PID" EXIT
 
-#
-## If application has been closed normaly (without any external influence)
-## then we dont have what do kill ... clear action asigned to EXIT interrupt.
-#
-trap '' EXIT
+	#
+	## Wait for Punisher
+	#
+	wait $PID
+	exitcode=$?
 
-debug "Application completed work ! [exitcode:$exitcode]"
+	#
+	## If application has been closed normaly (without any external influence)
+	## then we dont have what do kill ... clear action asigned to EXIT interrupt.
+	#
+	trap '' EXIT
+
+	debug "Application completed work ! [exitcode:$exitcode]"
+fi
 exitScript
