@@ -19,6 +19,13 @@ ERRCOLOR='\033[31m'
 ## Print version for this release
 #
 printVersion(){
+  toconsole "v$VERSION"
+}
+
+#
+# Print info about this script
+#
+printInfo(){
   toconsole "Author: $AUTHOR\nContact: $CONTACT\nrunapp v$VERSION"
 }
 
@@ -60,7 +67,7 @@ debug(){
 
 err(){
 	toconsole "${ERRCOLOR}ERROR:\033[m $1"
-	notify $1
+	#notify $1
 }
 
 readConfig(){
@@ -242,6 +249,7 @@ checkExistsFile(){
 
 printUsage(){
 #TODO:Make better description
+  printInfo
   echo -e "Usage:\n\t $0 [root-directory (optional) ] [java|maven](optional,default java) [--] [parameters to pass to the application]"
 }
 
