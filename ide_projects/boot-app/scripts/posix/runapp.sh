@@ -312,7 +312,6 @@ for symbol  in  $@ ; do
 	;;
 	--exec|-e)
 		EXEC_TOOL=$2
-		echo "execTool $EXEC_TOOL"
 		shift 2
 	;;
 	--debug|-d)
