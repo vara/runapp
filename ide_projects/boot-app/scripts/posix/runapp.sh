@@ -295,7 +295,7 @@ for symbol  in  $@ ; do
 		shift
 		break
     ;;
-    -h|--help|-?)
+    -h|--help)
     
 		printUsage
 		exit 0
@@ -309,6 +309,11 @@ for symbol  in  $@ ; do
 
 		STARTER=$symbol
 		shift
+	;;
+	--exec|-e)
+		EXEC_TOOL=$2
+		echo "execTool $EXEC_TOOL"
+		shift 2
 	;;
 	--debug|-d)
 	
@@ -450,7 +455,7 @@ if [ "$TESTING" -le "0" ]; then
 	#Too huge string
 	#debug "Execution Parameters: $EXECARGS"
 
-	eval $EXECPATH $EXECARGS '&'
+	eval $EXEC_TOOL $EXECPATH $EXECARGS '&'
 	PID=$!
 	debug "Created new process with PID:$PID."
 
@@ -466,11 +471,11 @@ if [ "$TESTING" -le "0" ]; then
 	exitcode=$?
 
 	#
-	## If application has been closed normaly (without any external influence)
+	## If the application has been closed normaly (without any external influence)
 	## then we dont have what do kill ... clear action asigned to EXIT interrupt.
 	#
 	trap '' EXIT
 
-	debug "Application completed work ! [exitcode:$exitcode]"
+	debug "The application has finished work ! [exitcode:$exitcode]"
 fi
 exitScript
