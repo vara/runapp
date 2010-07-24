@@ -301,9 +301,17 @@ SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 #
 #. $SCRIPT_HOME/notify.sh
 
-#########################--exec=*|-e=*
+##################
+##load lib timer
+#
+. $SCRIPT_HOME/timer.sh
+
+#########################
 ## Parse input argumnets
 #
+
+t=$(timer)
+
 while test $# -gt 0; do
   symbol="$1"
   debug "Parse argument '$symbol'" 2
@@ -481,6 +489,8 @@ debug "Execution Bin: $EXECPATH"
 debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
 debug "User args: $USER_ARGS_TO_APP"
+
+printf 'Elapsed time: %s\n' $(timer $t)
 
 if [ "$TESTING" -le "0" ]; then
 
