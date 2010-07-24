@@ -286,8 +286,8 @@ SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 #########################
 ## Parse input argumnets
 #
-for symbol  in  $@ ; do
-  
+while test $# -gt 0; do
+  symbol="$1"
   debug "Parse argument '$symbol'" 2
   case "$symbol" in
     "--")
@@ -342,6 +342,10 @@ for symbol  in  $@ ; do
 		shift
 	;;
 	*)
+		if [ -z "$symbol" ]; then
+		  break
+		fi
+
 		# Try resolve path to project directory
 		# NOTE: Only once we allow to define variable PROJECT_DIR.
 		#		Any further appeal will be ignoring. 
@@ -363,6 +367,7 @@ for symbol  in  $@ ; do
 			fi
 		else
 			warn "Detected attempt to overide variable PROJECT_DIR by '$symbol'. Operation not permited."
+			break
 		fi
 		
 	esac  
