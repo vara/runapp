@@ -71,12 +71,16 @@ err(){
 }
 
 readConfig(){
-	local configName="`pwd`/$CONFIG_FILE_NAME"
-	if [ -r $configName ];then
-		. $configName
-	else
-		warn "Config file '$configName' not exist"
-	fi
+	for prefix in "" "`pwd`/" "$HOME/"
+	do
+	  local configName="$prefix$CONFIG_FILE_PATH"
+	  if [ -r "$configName" ];then
+		  . $configName
+		  break
+	  else
+		  warn "Config file '$configName' not exist"
+	  fi
+	done
 }
 
 exitScript(){
@@ -242,17 +246,31 @@ checkJava(){
 checkExistsFile(){
   if [ ! -f "$1" ]; then
 	warn "File $1 not exists"
-	echo "0"
+	echo ""
   fi
-  echo "1"
+  echo $1
 }
 
 printUsage(){
 #TODO:Make better description
   printInfo
-  echo -e "Usage:\n\t $0 [root-directory (optional) ] [java|maven](optional,default java) [--] [parameters to pass to the application]"
-}
+  echo $"Usage:$0 [root-directory (optional) ] [options] [--] [parameters to pass to the application]
+	 
+  '--' marker 		for end of script parameters. Next parmeters will be passed to boot application
+  root-directory  	if not specified then root-dir will be set to directory from invoked this script.
 
+options:
+ 
+  -h|--help|-?		print this message  
+  -v|--version		print versions
+  java|maven		select provider for execution program (default java)
+  --exec=|-e		set tool for exectution provider with all created string argumets
+  --conf=|-c		set path to file with configuration stuff. Path can be absolute 
+			path to configuration file. If not then next path formation will begin
+			from \$ROOT_DIR/ ; \$HOME/
+  
+"
+}
 
 #######################################
 #                                     #
@@ -267,7 +285,7 @@ printUsage(){
 TESTING=${TESTING:-0}
 
 DEBUG=${DEBUG:-0}
-CONFIG_FILE_NAME=${CONFIG_FILE_NAME:-"runapp.conf"}
+CONFIG_FILE_PATH=${CONFIG_FILE_PATH:-"runapp.conf"}
 
 STARTER="java" #HARD CODE FIXME: after implement maven boot util
 
@@ -283,7 +301,7 @@ SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
 #
 #. $SCRIPT_HOME/notify.sh
 
-#########################
+#########################--exec=*|-e=*
 ## Parse input argumnets
 #
 while test $# -gt 0; do
@@ -295,7 +313,7 @@ while test $# -gt 0; do
 		shift
 		break
     ;;
-    -h|--help)
+    -h|--help|-\?)
     
 		printUsage
 		exit 0
@@ -314,26 +332,31 @@ while test $# -gt 0; do
 		EXEC_TOOL=$2
 		shift 2
 	;;
+	--exec=*|-e=*)
+		DEBUG=${1##*=}
+		shift
+	;;
 	--debug|-d)
 	
 		DEBUG=$2
 		shift 2
 	;;
 	--debug=*|-d=*)
-	
-		warn "Combine parameter not supported yet !"
+		DEBUG=${1##*=}
+		shift
+	;;
+	--conf=*|-c=*)
+		tmpFilePath=$(checkExistsFile $(eval echo -e "${1##*=}") );  
+		if [ ! -z "$tmpFilePath" ]; then  
+		  CONFIG_FILE_PATH=$tmpFilePath
+		fi
 		shift
 	;;
 	--conf|-c)
-	
- 		tmpFilePath=$(eval echo -e "$2")
-		if [  -f "$tmpFilePath" ]; then
-		  
-		  CONFIG_FILE_NAME=$tmpFilePath
-		  toconsole "CONFIG_FILE_NAME set to '$CONFIG_FILE_NAME'"
+ 		tmpFilePath=$(checkExistsFile $(eval echo -e "$2"))
+		if [ ! -z "$tmpFilePath" ]; then  
+		  CONFIG_FILE_PATH=$tmpFilePath
 		  shift 
-		else
-			warn "File '$tmpFilePath' not exists"
 		fi
 		shift
 	;;
@@ -360,20 +383,23 @@ while test $# -gt 0; do
 		  
 			if [ -d "$absolute_path" ]; then
 				PROJECT_DIR=$absolute_path
-				shift
 			else
 				warn "'$symbol' is not a directory."
-				absolute_path="" #clear variable if is not a path
+				printUsage
+				exit 1
+				#absolute_path="" #clear variable if is not a path
 			fi
 		else
 			warn "Detected attempt to overide variable PROJECT_DIR by '$symbol'. Operation not permited."
 			break
 		fi
+
+		shift
 		
 	esac  
 done
 
-USER_ARGS_TO_APP="$*"
+USER_ARGS_TO_APP="$USER_ARGS_TO_APP $*"
 
 ########################################
 
@@ -394,6 +420,8 @@ M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
 COMMENTCHAR=${COMMENTCHAR:-"#"}
 WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
 
+debug "Config file path = $CONFIG_FILE_PATH" 2
+
 readConfig
 
 if [ "$TESTING" -gt "0" ]; then  warn "Script running in testing mode !"
@@ -407,7 +435,6 @@ if [ "$?" -eq "0" ]; then
 fi
 
 debug "PROJECT_DIR=$PROJECT_DIR" 1
-
 checkJava
 
 DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$PROJECT_DIR/runapp.dep"}
