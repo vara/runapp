@@ -443,8 +443,9 @@ case "$STARTER" in
 		exit 0
 esac
 
-debug "`$JAVA_BIN -fullversion 2>&1`"
-debug "Execution Path: $EXECPATH"
+debug "`$JAVA_BIN -version 2>&1`"
+debug "Exec tool: $EXEC_TOOL"
+debug "Execution Bin: $EXECPATH"
 debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
 debug "User args: $USER_ARGS_TO_APP"
