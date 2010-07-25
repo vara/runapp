@@ -433,7 +433,7 @@ debug "Config file path = $CONFIG_FILE_PATH" 2
 readConfig
 
 if [ "$TESTING" -gt "0" ]; then  warn "Script running in testing mode !"
-  if [ "$WAIT_ON_EXIT" -le "0" ]; then WAIT_ON_EXIT=2; fi
+  #if [ "$WAIT_ON_EXIT" -le "0" ]; then WAIT_ON_EXIT=2; fi
 fi
 
 echo $DEBUG | grep "[^0-9]" > /dev/null 2>&1	
