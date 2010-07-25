@@ -143,7 +143,7 @@ parseFile() {
 					;;
 				esac
 			else
-				debug "[$currentRow]Commented line:$line" 3
+				debug "[$currentRow]Comment-out line:$line" 3
 			fi
 		done
 
@@ -490,7 +490,7 @@ debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
 debug "User args: $USER_ARGS_TO_APP"
 
-printf 'Elapsed time: %s\n' $(timer $t)
+debug "Elapsed time: $(timer $t)"
 
 if [ "$TESTING" -le "0" ]; then
 
