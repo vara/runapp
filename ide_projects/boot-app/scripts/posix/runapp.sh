@@ -341,11 +341,10 @@ while test $# -gt 0; do
 		shift 2
 	;;
 	--exec=*|-e=*)
-		DEBUG=${1##*=}
+		EXEC_TOOL=${1##*=}
 		shift
 	;;
 	--debug|-d)
-	
 		DEBUG=$2
 		shift 2
 	;;
@@ -490,7 +489,7 @@ debug "JVM Parameters: $JVM_ARGS"
 debug "Main class: $MAINCLASS"
 debug "User args: $USER_ARGS_TO_APP"
 
-debug "Elapsed time: $(timer $t)"
+debug "Elapsed time of boot application : $(timer $t)"
 
 if [ "$TESTING" -le "0" ]; then
 
