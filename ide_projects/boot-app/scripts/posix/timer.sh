@@ -15,30 +15,32 @@
 # If called with arguments the first is used as a timer
 # value and the elapsed time is returned in the form HH:MM:SS.
 #
+
+#set -x
+
 function timer()
 {
     if [[ $# -eq 0 ]]; then
-        echo $(date '+%s')
+        getMilisec
     else
-        local  stime=$1
-        etime=$(date '+%s')
+        local stime=$1
+        local etime=$(getMilisec)
 
         if [[ -z "$stime" ]]; then stime=$etime; fi
 
         dt=$((etime - stime))
-        ds=$((dt % 60))
-        dm=$(((dt / 60) % 60))
-        dh=$((dt / 3600))
-        printf '%d:%02d:%02d' $dh $dm $ds
+        #ds=$((dt % 60))
+        #dm=$(((dt / 60) % 60))
+        #dh=$((dt / 3600))
+        printf '%dms' $dt
     fi
 }
 
-# If invoked directly run test code.
-if [[ $(basename $0 .sh) == 'timer' ]]; then
-    t=$(timer)
-    read -p 'Enter when ready...' p
-    printf 'Elapsed time: %s\n' $(timer $t)
-fi
+function getMilisec(){
 
-## vim: tabstop=4: shiftwidth=4: noexpandtab:
-## kate: tab-width 4; indent-width 4; replace-tabs false;
+	local millisec=$((`date +%s` * 1000))	
+	local nanosec=`date +%N`
+#		echo "n:$nanosec">&2
+	millisec=$((millisec + ${nanosec#0} /1000000))
+	echo $millisec
+}
