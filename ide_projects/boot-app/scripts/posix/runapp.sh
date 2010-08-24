@@ -16,6 +16,38 @@ DEBUGCOLOR='\033[32m'
 ERRCOLOR='\033[31m'
 
 #
+## Run script in testing mode. 
+## Don't run external application, just run only script and exit.
+#
+TESTING_MODE=${TESTING_MODE:-0}
+
+DEBUG=${DEBUG:-0}
+CONFIG_FILE_PATH=${CONFIG_FILE_PATH:-"runapp.conf"}
+
+STARTER="java" #HARD CODE FIXME: after implement maven boot util
+
+SCRIPT_LOCATION=$0
+# Step through symlinks to find where the script really is
+while [ -L "$SCRIPT_LOCATION" ]; do
+  SCRIPT_LOCATION=`readlink -e "$SCRIPT_LOCATION"`
+done
+SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
+
+PATH="$SCRIPT_HOME:$PATH"
+
+##################
+##load lib notify
+#
+#. $SCRIPT_HOME/notify.sh
+
+##################
+##load lib timer
+#
+. $SCRIPT_HOME/timer.sh
+
+t=$(timer)
+
+#
 ## Print version for this release
 #
 printVersion(){
@@ -86,7 +118,7 @@ readConfig(){
 exitScript(){
 	
 	if [ -n "$WAIT_ON_EXIT" ] ; then
-		debug "Wait on exit $WAIT_ON_EXIT"
+		debug "Wait on exit $WAIT_ON_EXIT" 2
 		sleep $WAIT_ON_EXIT
 	fi
 
@@ -278,40 +310,9 @@ options:
 #                                     #
 #######################################
 
-#
-## Run script in testing mode. 
-## Don't run external application, just run only script and exit.
-#
-TESTING=${TESTING:-0}
-
-DEBUG=${DEBUG:-0}
-CONFIG_FILE_PATH=${CONFIG_FILE_PATH:-"runapp.conf"}
-
-STARTER="java" #HARD CODE FIXME: after implement maven boot util
-
-SCRIPT_LOCATION=$0
-# Step through symlinks to find where the script really is
-while [ -L "$SCRIPT_LOCATION" ]; do
-  SCRIPT_LOCATION=`readlink -e "$SCRIPT_LOCATION"`
-done
-SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
-
-##################
-##load lib notify
-#
-#. $SCRIPT_HOME/notify.sh
-
-##################
-##load lib timer
-#
-. $SCRIPT_HOME/timer.sh
-
 #########################
 ## Parse input argumnets
 #
-
-t=$(timer)
-
 while test $# -gt 0; do
   symbol="$1"
   debug "Parse argument '$symbol'" 2
@@ -368,7 +369,7 @@ while test $# -gt 0; do
 		shift
 	;;
 	--testingMode|-tm)
-		TESTING=1
+		TESTING_MODE=1
 		shift
 	;;
 	*)
@@ -385,7 +386,7 @@ while test $# -gt 0; do
 		#			"/path2" will be assigned to PROJECT_DIR.
 		#		
 		if [ ! -n "$absolute_path" ]; then
-			debug "Try resolve path '$symbol'"
+			#debug "Try resolve path '$symbol'"
 			absolute_path=$(eval echo -e "$symbol")
 		  
 			if [ -d "$absolute_path" ]; then
@@ -428,10 +429,9 @@ COMMENTCHAR=${COMMENTCHAR:-"#"}
 WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
 
 debug "Config file path = $CONFIG_FILE_PATH" 2
-
 readConfig
 
-if [ "$TESTING" -gt "0" ]; then  warn "Script running in testing mode !"
+if [ "$TESTING_MODE" -gt "0" ]; then  warn "Script running in testing mode !"
   #if [ "$WAIT_ON_EXIT" -le "0" ]; then WAIT_ON_EXIT=2; fi
 fi
 
@@ -491,10 +491,12 @@ debug "User args: $USER_ARGS_TO_APP"
 
 debug "Elapsed time of boot application : $(timer $t)"
 
-if [ "$TESTING" -le "0" ]; then
+if [ "$TESTING_MODE" -le "0" ]; then
 
 	#Too huge string
 	#debug "Execution Parameters: $EXECARGS"
+
+workTime=$(timer)
 
 	eval $EXEC_TOOL $EXECPATH $EXECARGS '&'
 	PID=$!
@@ -510,6 +512,8 @@ if [ "$TESTING" -le "0" ]; then
 	#
 	wait $PID
 	exitcode=$?
+
+debug "Application work time: $(timer $workTime)"
 
 	#
 	## If the application has been closed normaly (without any external influence)
