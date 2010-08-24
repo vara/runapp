@@ -17,14 +17,22 @@
 #
 
 #set -x
+PATH=".:$PATH"
 
-function timer()
+function timer(){
+  timerC $*
+}
+
+#
+## Using 'date' command for get current time value
+#
+function timerD()
 {
     if [[ $# -eq 0 ]]; then
-        getMilisec
+        getMillisec
     else
-        local stime=$1
-        local etime=$(getMilisec)
+		local etime=$(getMillisec)
+		local stime=$1        
 
         if [[ -z "$stime" ]]; then stime=$etime; fi
 
@@ -36,7 +44,7 @@ function timer()
     fi
 }
 
-function getMilisec(){
+function getMillisec(){
 
 	local millisec=$((`date +%s` * 1000))	
 	local nanosec=`date +%N`
@@ -44,3 +52,18 @@ function getMilisec(){
 	millisec=$((millisec + ${nanosec#0} /1000000))
 	echo $millisec
 }
+
+#
+## Using c implementation for get current time value
+## (gettimeofday function)
+#
+function timerC(){
+	if [[ $# -eq 0 ]]; then
+	  time_m
+	else
+	  dt=`time_m $1`
+	  printf '%dms' $dt
+	fi
+}
+
+#echo $(timerC)
