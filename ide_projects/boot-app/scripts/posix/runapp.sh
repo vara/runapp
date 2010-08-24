@@ -387,15 +387,20 @@ while test $# -gt 0; do
 		#		
 		if [ ! -n "$absolute_path" ]; then
 			#debug "Try resolve path '$symbol'"
+			#This method allows to passing path with prefix '~'
 			absolute_path=$(eval echo -e "$symbol")
 		  
 			if [ -d "$absolute_path" ]; then
 				PROJECT_DIR=$absolute_path
 			else
 				warn "'$symbol' is not a directory."
-				printUsage
-				exit 1
-				#absolute_path="" #clear variable if is not a path
+				
+				#@Author Grzegorz (vara) Warywoda 2010-08-24 23:41:03 CEST
+				#Commented-out for fix passing application argumnets witchout script argumnets
+				#printUsage
+				#exit 1
+				unset absolute_path #clear variable if is not a path
+				shift
 			fi
 		else
 			warn "Detected attempt to overide variable PROJECT_DIR by '$symbol'. Operation not permited."
