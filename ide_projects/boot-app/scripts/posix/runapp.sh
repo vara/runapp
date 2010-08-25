@@ -286,18 +286,32 @@ checkExistsFile(){
 printUsage(){
 #TODO:Make better description
   printInfo
-  echo $"Usage:$0 [root-directory (optional) ] [options] [--] [parameters to pass to the application]
+  echo -e "\n"
+  echo $"Usage:
+  $0 [root-directory] [script switches] -- [application switches]
+
 	 
   '--' marker 		for end of script parameters. Next parmeters will be passed to boot application
-  root-directory  	if not specified then root-dir will be set to directory from invoked this script.
 
-options:
- 
-  -h|--help|-?		print this message  
-  -v|--version		print versions
-  java|maven		select provider for execution program (default java)
-  --exec=|-e		set tool for exectution provider with all created string argumets
-  --conf=|-c		set path to file with configuration stuff. Path can be absolute 
+  [root-directory] 	
+			It is optional option without prefix (symbol). It is a directory with configuration files, needed to properly boot an application.
+			If \"root-directory\" will not be set then \"root-directory\" will be assigned to a directory from invoked this script.
+			For set this directory only need pose the path to \"root-directory\" before marker '--'.
+  
+  [application switches]
+			Switches passing to the boot application.
+
+  [script switches]
+
+	-h|--help|-?	print this message  
+
+	-v|--version	print versions
+
+	java|maven	select provider for execution program (default java)
+
+	--exec=|-e	set tool for exectution provider with all created string arguments
+
+	--conf=|-c	set path to file with configuration stuff. Path can be absolute 
 			path to configuration file. If not then next path formation will begin
 			from \$ROOT_DIR/ ; \$HOME/
   
@@ -518,7 +532,7 @@ workTime=$(timer)
 	wait $PID
 	exitcode=$?
 
-debug "Application work time: $(timer $workTime)"
+debug "Application working time: $(timer $workTime)"
 
 	#
 	## If the application has been closed normaly (without any external influence)
