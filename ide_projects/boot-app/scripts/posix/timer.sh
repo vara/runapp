@@ -46,10 +46,10 @@ function timerD()
 
 function getMillisec(){
 
-	local millisec=$((`date +%s` * 1000))	
-	local nanosec=`date +%N`
+	local millisec=$((`date +10#%s` * 1000))	
+	local nanosec=$((`date +10#%N`))
 #		echo "n:$nanosec">&2
-	millisec=$((millisec + ${nanosec#0} /1000000))
+	millisec=$((millisec + $nanosec /1000000))
 	echo $millisec
 }
 
