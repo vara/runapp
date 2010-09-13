@@ -316,6 +316,7 @@ printUsage(){
 			from \$ROOT_DIR/ ; \$HOME/
   
 "
+#TODO: update help message
 }
 
 #######################################
@@ -384,6 +385,17 @@ while test $# -gt 0; do
 	;;
 	--testingMode|-tm)
 		TESTING_MODE=1
+		shift
+	;;
+	--mainClass|-mc)
+		if [ ! -z "$2" ]; then
+		  MAINCLASS="$2"
+		  shift
+		fi
+		shift
+	;;	
+	--mainClass=*|-mc=*)
+		MAINCLASS=${1##*=}
 		shift
 	;;
 	*)
