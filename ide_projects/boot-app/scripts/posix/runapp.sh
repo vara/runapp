@@ -24,7 +24,7 @@ TESTING_MODE=${TESTING_MODE:-0}
 DEBUG=${DEBUG:-0}
 CONFIG_FILE_PATH=${CONFIG_FILE_PATH:-"runapp.conf"}
 
-STARTER="java" #HARD CODE FIXME: after implement maven boot util
+PROVIDER="java" #HARD CODE FIXME: after implement maven boot util
 
 SCRIPT_LOCATION=$0
 # Step through symlinks to find where the script really is
@@ -349,7 +349,7 @@ while test $# -gt 0; do
 	;;
 	java|maven)
 
-		STARTER=$symbol
+		PROVIDER=$symbol
 		shift
 	;;
 	--exec|-e)
@@ -489,7 +489,7 @@ debug "CLASSPATH:$CLASSPATH" 3
 
 JVM_ARGS=$(parseFile $JVM_ARGS_FILE "args")
 
-case "$STARTER" in
+case "$PROVIDER" in
     java)
 		
 		EXECPATH="$JAVA_BIN"	
@@ -508,7 +508,7 @@ case "$STARTER" in
 		#mvn -e --no-plugin-updates --batch-mode -cp .:$CLASSPATH -Dexec.args=$@ exec:java -Dexec.mainClass=$MAINCLASS
     ;;
     *)
-		warn "Unrecongnized starter '$STARTER'."
+		warn "Unrecongnized provider '$PROVIDER'."
 		printUsage
 		exit 0
 esac
