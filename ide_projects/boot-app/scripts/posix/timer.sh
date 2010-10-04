@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Dowloaded from:http://www.linuxjournal.com/content/use-date-command-measure-elapsed-time
 #
@@ -19,32 +19,29 @@
 #set -x
 PATH=".:$PATH"
 
-function timer(){
+timer() {
   timerC $*
 }
 
 #
 ## Using 'date' command for get current time value
 #
-function timerD()
+timerD()
 {
-    if [[ $# -eq 0 ]]; then
+    if [ $# -eq 0 ]; then
         getMillisec
     else
 		local etime=$(getMillisec)
 		local stime=$1        
 
-        if [[ -z "$stime" ]]; then stime=$etime; fi
+        if [ -z "$stime" ]; then stime=$etime; fi
 
         dt=$((etime - stime))
-        #ds=$((dt % 60))
-        #dm=$(((dt / 60) % 60))
-        #dh=$((dt / 3600))
         printf '%dms' $dt
     fi
 }
 
-function getMillisec(){
+getMillisec() {
 
 	local millisec=$((`date +10#%s` * 1000))	
 	local nanosec=$((`date +10#%N`))
@@ -57,8 +54,8 @@ function getMillisec(){
 ## Using c implementation for get current time value
 ## (gettimeofday function)
 #
-function timerC(){
-	if [[ $# -eq 0 ]]; then
+timerC() {
+	if [ $# -eq 0 ]; then
 	  time_m
 	else
 	  dt=`time_m $1`
