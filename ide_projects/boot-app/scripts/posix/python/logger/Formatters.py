@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os
 
 class ColorFormatter(logging.Formatter):
   FORMAT = ("[%(levelname)-7s] "
@@ -40,4 +41,6 @@ class ColorFormatter(logging.Formatter):
       fore_color = 30 + self.COLORS[levelname]
       levelname_color = self.COLOR_SEQ % fore_color + levelname + self.RESET_SEQ
       record.levelname = levelname_color
-    return logging.Formatter.format(self, record)
+    ss = logging.Formatter.format(self, record)    
+    return ss.replace(os.linesep,'')
+  
