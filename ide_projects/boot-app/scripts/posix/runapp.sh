@@ -118,8 +118,13 @@ readConfig(){
 exitScript(){
 	
 	if [ -n "$WAIT_ON_EXIT" ] ; then
+	  
+	  if [ "$DEBUG" -gt "1" ]; then
 		debug "Wait on exit $WAIT_ON_EXIT" 2
+	  fi
+
 		sleep $WAIT_ON_EXIT
+
 	fi
 
 	exit $exitcode
@@ -144,8 +149,10 @@ parseFile() {
 
 	if [ -e $fileToRead ];then
 		exec<$fileToRead
-
-		debug "Prepare parse $fileToRead file. [type:$type]" 3
+		
+		if [ "$DEBUG" -gt "2" ]; then
+		  debug "Prepare parse $fileToRead file. [type:$type]" 3
+		fi
 		
 		while read -e line;	do
 
@@ -154,7 +161,10 @@ parseFile() {
 			if [ "`expr substr "$line" 1 1`" != "$COMMENTCHAR" ];then
 			
 				line=`eval echo $line`
-				debug "[$currentRow]Resolved line: $line" 4
+
+				if [ "$DEBUG" -gt "3" ]; then
+				  debug "[$currentRow]Resolved line: $line" 4
+				fi
 				
 				case "$type" in
 					#This section parse and validate path to file stored in '$line'
@@ -162,8 +172,12 @@ parseFile() {
 						
 						if [ -r "$line" ]; then 
 							echo -n "$line:"
-						else 
-							debug "[$currentRow]Can't read from '$line', ignore it !" 4
+						else
+
+							if [ "$DEBUG" -gt "3" ]; then
+							  debug "[$currentRow]Can't read from '$line', ignore it !" 4
+							fi
+
 						fi
 					;;
 					"args")
@@ -175,11 +189,17 @@ parseFile() {
 					;;
 				esac
 			else
-				debug "[$currentRow]Comment-out line:$line" 3
+
+				if [ "$DEBUG" -gt "2" ]; then
+				  debug "[$currentRow]Comment-out line:$line" 3
+				fi
+
 			fi
 		done
-
-		debug "Finished" 3
+		
+		if [ "$DEBUG" -gt "2" ]; then
+		  debug "Finished" 3
+		fi
 
 	else warn "[$fileToRead] File Not found"
 	fi
@@ -206,13 +226,13 @@ resolve_symlink () {
 checkJava(){
 
 	if [ -z "$JAVA_HOME" ]; then
-		debug "Variable enviroment \$JAVA_HOME not found." 3
+		#debug "Variable enviroment \$JAVA_HOME not found." 3
 		
 		if [ -z "$JRE_HOME" ]; then 
-			debug "Variable enviroment \$JRE_HOME not found." 3
+			#debug "Variable enviroment \$JRE_HOME not found." 3
 			
 			if [ -z "$JDK_HOME" ]; then 
-				debug "Variable enviroment \$JDK_HOME not found." 3
+				#debug "Variable enviroment \$JDK_HOME not found." 3
 			
 				case "`uname`" in
 					Darwin*)
@@ -240,7 +260,10 @@ checkJava(){
 						local java=`which java`
 						if [ -n "$java" ] ; then
 							java=`resolve_symlink "$java"`
-							debug "Resolved symlink for java is '$java'" 3
+							
+							if [ "$DEBUG" -gt "2" ]; then
+							  debug "Resolved symlink for java is '$java'" 3
+							fi
 							JAVA_BIN=$java
 						else
 							debug ""
@@ -250,15 +273,15 @@ checkJava(){
 				esac
 				
 			else
-				debug "JDK_HOME viarable is set to :"$JDK_HOME 3
+				#debug "JDK_HOME viarable is set to :"$JDK_HOME 3
 				JAVA_BIN="$JDK_HOME/bin/java"
 			fi
 		else
-			debug "JRE_HOME viarable is set to :"$JRE_HOME 3
+			#debug "JRE_HOME viarable is set to :"$JRE_HOME 3
 			JAVA_BIN="$JRE_HOME/bin/java"
 		fi
 	else
-		debug "JAVA_HOME viarable is set to :"$JAVA_HOME 3
+		#debug "JAVA_HOME viarable is set to :"$JAVA_HOME 3
 		JAVA_BIN="$JAVA_HOME/bin/java"
 	fi
 	
@@ -268,8 +291,10 @@ checkJava(){
 		exitcode=2
 		exitScript
 	fi
-	
-	debug "java bin has been resolved properly and was set to "${JAVA_BIN} 2
+
+	if [ "$DEBUG" -gt "1" ]; then
+	  debug "java bin has been resolved properly and was set to "${JAVA_BIN} 2
+	fi
 }
 
 #
@@ -301,7 +326,11 @@ printUsage(){
 #
 while test $# -gt 0; do
   symbol="$1"
-  debug "Parse argument '$symbol'" 2
+
+  if [ "$DEBUG" -gt "1" ]; then
+	debug "Parse argument '$symbol'" 2
+  fi
+
   case "$symbol" in
     "--")
     
@@ -430,7 +459,10 @@ M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
 COMMENTCHAR=${COMMENTCHAR:-"#"}
 WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
 
-debug "Config file path = $CONFIG_FP" 2
+if [ "$DEBUG" -gt "1" ]; then
+  debug "Config file path = $CONFIG_FP" 2
+fi
+
 readConfig
 
 if [ "$TESTING_MODE" -gt "0" ]; then  warn "Script running in testing mode !"
@@ -443,7 +475,10 @@ if [ "$?" -eq "0" ]; then
 	DEBUG=0
 fi
 
-debug "PROJECT_DIR=$PROJECT_DIR" 1
+if [ "$DEBUG" -gt "0" ]; then
+  debug "PROJECT_DIR=$PROJECT_DIR" 1
+fi
+
 checkJava
 
 DEPENDENCY_FP=${DEPENDENCY_FP:-"$PROJECT_DIR/runapp.dep"}
@@ -456,7 +491,10 @@ if [ -z "$MAINCLASS" ]; then
 fi
 
 CLASSPATH=$(parseFile $DEPENDENCY_FP "path")
-debug "CLASSPATH:$CLASSPATH" 3
+
+if [ "$DEBUG" -gt "2" ]; then
+  debug "CLASSPATH:$CLASSPATH" 3
+fi
 
 JVM_ARGS=$(parseFile $JVM_ARGS_FP "args")
 
@@ -484,14 +522,17 @@ case "$PROVIDER" in
 		exit 0
 esac
 
-debug "`$JAVA_BIN -version 2>&1`"
-debug "Exec tool: $EXEC_TOOL"
-debug "Execution Bin: $EXECPATH"
-debug "JVM Parameters: $JVM_ARGS"
-debug "Main class: $MAINCLASS"
-debug "User args: $USER_ARGS_TO_APP"
+if [ "$DEBUG" -gt "0" ]; then
 
-debug "Elapsed time of boot application : $(timer $t)"
+  debug "`$JAVA_BIN -version 2>&1`"
+  debug "Exec tool: $EXEC_TOOL"
+  debug "Execution Bin: $EXECPATH"
+  debug "JVM Parameters: $JVM_ARGS"
+  debug "Main class: $MAINCLASS"
+  debug "User args: $USER_ARGS_TO_APP"
+fi
+
+  toconsole "Elapsed time of boot application : $(timer $t)"
 
 if [ "$TESTING_MODE" -le "0" ]; then
 
@@ -502,7 +543,10 @@ workTime=$(timer)
 
 	eval $EXEC_TOOL $EXECPATH $EXECARGS '&'
 	PID=$!
-	debug "Created new process with PID:$PID."
+	
+	if [ "$DEBUG" -gt "0" ]; then
+	  debug "Created new process with PID:$PID."
+	fi
 
 	#
 	## Set hook (intercept) for EXIT interrupt (from shell sent directly by ctrl+x).
@@ -514,15 +558,19 @@ workTime=$(timer)
 	#
 	wait $PID
 	exitcode=$?
-
-	debug "Application working time: $(timer $workTime)"
+	
+	if [ "$DEBUG" -gt "0" ]; then
+	  debug "Application working time: $(timer $workTime)"
+	fi
 
 	#
 	## If the application has been closed normaly (without any external influence)
 	## then we dont have what do kill ... clear action asigned to EXIT interrupt.
 	#
 	trap '' EXIT
-
-	debug "The application has finished work ! [exitcode:$exitcode]"
+	
+	if [ "$DEBUG" -gt "0" ]; then
+	  debug "The application has finished work ! [exitcode:$exitcode]"
+	fi
 fi
 exitScript
