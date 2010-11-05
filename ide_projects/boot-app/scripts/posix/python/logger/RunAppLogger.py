@@ -19,11 +19,6 @@ class RALogger(logging.Logger):
     @staticmethod
     def initialize():
         
-        hdlr = ConsoleHandler()
-        fmt = ColorFormatter()        
-        hdlr.setFormatter(fmt)
-        logging.getLogger().addHandler(hdlr)
-                
         for i in range(1,4):
             logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i+1))
             
@@ -34,6 +29,12 @@ class RALogger(logging.Logger):
 
         if debugLev:
             logging.getLogger().setLevel(int(debugLev))         
+            
+        hdlr = ConsoleHandler()
+        fmt = ColorFormatter()        
+        hdlr.setFormatter(fmt)
+        
+        logging.getLogger().addHandler(hdlr)
 
     def setDebugLevel(self,intVal):
         try:
@@ -70,6 +71,16 @@ class RALogger(logging.Logger):
     @staticmethod
     def isWarnEnable():
         return logging.getLogger().isEnabledFor(logging.WARN)
+    
+    @staticmethod
+    def setRootDebugLevel(level=None):
+        if not level:
+            level = 0
+        try:
+            level =  logging.DEBUG - min((4,level))
+            logging.getLogger().setLevel(level)
+        except:
+            logging.warn("You try set wrong level ! [%s]",level)
 
 if __name__ == "__main__":
 
