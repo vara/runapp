@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 #
-## Author: Grzegorz (vara) Warywoda 
-## Since: 2010-11-03 14:20:47 CET
+# Author: Grzegorz (vara) Warywoda 
+# Since: 2010-11-05 22:20:20 CET
 #
 
 import os
@@ -10,11 +10,13 @@ import sys
 import commands
 import time
 import logging
+import getopt
 
 from utils.Utils import OSUtil, FSUtil, Timer
 from logger.RunAppLogger import RALogger
 
 RALogger.initialize()
+RALogger.setRootDebugLevel()
 
 LOG = logging.getLogger("runapp")
 
@@ -50,6 +52,8 @@ CONFIG_FP     = os.getenv("CONFIG_FP","runapp.conf")
 DEPENDENCY_FP = os.getenv("DEPENDENCY_FP","runapp.dep")
 JVM_ARGS_FP   = os.getenv("JVM_ARGS_FP","runapp.jvmargs")
 
+TESTING_MODE  = os.getenv("TESTING_MODE")
+
 def exitScript():
     
     LOG.debug("Wait on exit %d" , WAIT_ON_EXIT)
@@ -57,32 +61,31 @@ def exitScript():
     exit()
 
 def resolveJavaPath() :
-    _javaBin = os.getenv("JAVA_HOME")
-    if _javaBin ==  None: 
-        _javaBin = os.getenv("JRE_HOME")
-        if _javaBin ==  None: 
-            _javaBin = os.getenv("JDK_HOME")
-            if _javaBin ==  None: 
-                
-                if OSUtil.isLinux() or OSUtil.isMac():
-                    _javaBin = commands.getoutput('which java')
-                    
-                elif OSUtil.isWin():
-                    try:
-                        from _winreg import ConnectRegistry,OpenKey,QueryValueEx,CloseKey
-                        
-                        aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
-                        aKey1 = OpenKey(aReg, r"SOFTWARE\JavaSoft\Java Runtime Environment")
-                        JRTVersion = QueryValueEx(aKey,"CurrentVersion")                    
-                        aKey2 = OpenKey(aKey1, JRTVersion)
-                        _javaBin = QueryValueEx(aKey,"JavaHome") 
-                    
-                        CloseKey(aKey1) 
-                        CloseKey(aKey2) 
-                        CloseKey(aReg)                        
-                        
-                    except ImportError:
-                        print "Module _winreg not found" 
+    
+    for value in ("JAVA_HOME","JRE_HOME","JDK_HOME") :	
+	if os.getenv(value) != None:
+	    _javaBin = os.getenv(value)
+	    break	    
+    
+    if _javaBin == None:
+	if OSUtil.isLinux() or OSUtil.isMac():
+	    _javaBin = commands.getoutput('which java')
+	elif OSUtil.isWin():
+	    try:
+		from _winreg import ConnectRegistry,OpenKey,QueryValueEx,CloseKey
+	       
+	        aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
+	        aKey1 = OpenKey(aReg, r"SOFTWARE\JavaSoft\Java Runtime Environment")
+	        JRTVersion = QueryValueEx(aKey,"CurrentVersion")                    
+	        aKey2 = OpenKey(aKey1, JRTVersion)
+	        _javaBin = QueryValueEx(aKey,"JavaHome") 
+	   
+	        CloseKey(aKey1) 
+	        CloseKey(aKey2) 
+	        CloseKey(aReg)                        
+	       
+	    except ImportError:
+	        print "Module _winreg not found" 
     
     if _javaBin !=  None: 
         if not _javaBin.endswith("/bin/java"):
@@ -122,20 +125,32 @@ def printUsage():
 # This is Entry point for this script #
 #                                     #
 #######################################
-START_TIME_MS = Timer.time()
 
-JAVA_BIN = resolveJavaPath()
-if not JAVA_BIN:
-    LOG.error("Java not found, set JAVA_HOME in envirioment variables")
-    exitScript()   
+def main(argv):
+    START_TIME_MS = Timer.time()
     
-LOG.info("Script Home: %s ",SCRIPT_HOME)
-LOG.info( "Path to java : %s", JAVA_BIN)
+    try:                                
+        opts, args = getopt.getopt(argv, "hg:d", ["help", "grammar="]) 
+	
+    except getopt.GetoptError:           
+        printUsage
+	exitScript
+    
+    JAVA_BIN = resolveJavaPath()
+    if not JAVA_BIN:
+	LOG.error("Java not found, set JAVA_HOME in envirioment variables")
+	exitScript()   
+    
+    LOG.debug("Script Home: %s ",SCRIPT_HOME)
+    LOG.info("Path to java : %s", JAVA_BIN)
+    LOG.info("Java-Version : %s",commands.getoutput(JAVA_BIN + " -version"))
+    readConfig()
 
-readConfig()
+    LOG.info("Elapsed time of preparing of boot application %dms",Timer.time(START_TIME_MS))
 
-LOG.info("Elapsed time of boot application %dms",Timer.time(START_TIME_MS))
+    if not TESTING_MODE:
+	LOG.info("RUN APP")
 
-exitScript()
-
-
+if __name__ == "__main__":
+    main(sys.argv[1:])
+    exitScript()
