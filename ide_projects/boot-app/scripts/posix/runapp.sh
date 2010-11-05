@@ -22,7 +22,7 @@ ERRCOLOR='\033[31m'
 TESTING_MODE=${TESTING_MODE:-0}
 
 DEBUG=${DEBUG:-0}
-CONFIG_FILE_PATH=${CONFIG_FILE_PATH:-"runapp.conf"}
+CONFIG_FP=${CONFIG_FP:-"runapp.conf"}
 
 PROVIDER="java" #HARD CODE FIXME: after implement maven boot util
 
@@ -105,7 +105,7 @@ err(){
 readConfig(){
 	for prefix in "" "`pwd`/" "$HOME/"
 	do
-	  local configName="$prefix$CONFIG_FILE_PATH"
+	  local configName="$prefix$CONFIG_FP"
 	  if [ -r "$configName" ];then
 		  . $configName
 		  break
@@ -342,14 +342,14 @@ while test $# -gt 0; do
 	--conf=*|-c=*)
 		tmpFilePath=$(checkExistsFile $(eval echo -e "${1##*=}") );  
 		if [ ! -z "$tmpFilePath" ]; then  
-		  CONFIG_FILE_PATH=$tmpFilePath
+		  CONFIG_FP=$tmpFilePath
 		fi
 		shift
 	;;
 	--conf|-c)
  		tmpFilePath=$(checkExistsFile $(eval echo -e "$2"))
 		if [ ! -z "$tmpFilePath" ]; then  
-		  CONFIG_FILE_PATH=$tmpFilePath
+		  CONFIG_FP=$tmpFilePath
 		  shift 
 		fi
 		shift
@@ -430,7 +430,7 @@ M2_REPOSITORY=${M2_REPOSITORY:-"$HOME/.m2/repository"}
 COMMENTCHAR=${COMMENTCHAR:-"#"}
 WAIT_ON_EXIT=${WAIT_ON_EXIT:-0}
 
-debug "Config file path = $CONFIG_FILE_PATH" 2
+debug "Config file path = $CONFIG_FP" 2
 readConfig
 
 if [ "$TESTING_MODE" -gt "0" ]; then  warn "Script running in testing mode !"
@@ -446,8 +446,8 @@ fi
 debug "PROJECT_DIR=$PROJECT_DIR" 1
 checkJava
 
-DEPENDENCY_FILE=${DEPENDENCY_FILE:-"$PROJECT_DIR/runapp.dep"}
-JVM_ARGS_FILE=${JVM_ARGS_FILE:-"$PROJECT_DIR/runapp.jvmargs"}
+DEPENDENCY_FP=${DEPENDENCY_FP:-"$PROJECT_DIR/runapp.dep"}
+JVM_ARGS_FP=${JVM_ARGS_FP:-"$PROJECT_DIR/runapp.jvmargs"}
 
 
 if [ -z "$MAINCLASS" ]; then
@@ -455,10 +455,10 @@ if [ -z "$MAINCLASS" ]; then
   exit 3
 fi
 
-CLASSPATH=$(parseFile $DEPENDENCY_FILE "path")
+CLASSPATH=$(parseFile $DEPENDENCY_FP "path")
 debug "CLASSPATH:$CLASSPATH" 3
 
-JVM_ARGS=$(parseFile $JVM_ARGS_FILE "args")
+JVM_ARGS=$(parseFile $JVM_ARGS_FP "args")
 
 case "$PROVIDER" in
     java)
