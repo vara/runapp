@@ -27,7 +27,7 @@ class OSUtil(object):
 	_isMac = False
 	
 	def __init__(self):    
-	    print "Created instance of OSUtils.__impl : ",id(self)
+	    #print "Created instance of OSUtils.__impl : ",id(self)
 	    if sys.platform.startswith("win"):
 		self._isWin = True
 
