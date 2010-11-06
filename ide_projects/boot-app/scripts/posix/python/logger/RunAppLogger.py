@@ -12,6 +12,8 @@ DEBUG4 = 7
 DEBUG3 = 8
 DEBUG2 = 9
 
+DEFAULT_FORMAT = "[%(levelname)-7s] : %(message)s (%(filename)s:%(lineno)d)"
+
 class RALogger(logging.Logger):
         
     def __init__(self,name):
@@ -33,10 +35,10 @@ class RALogger(logging.Logger):
             
         hdlr = ConsoleHandler()
         
-        if OSUtil.isLinux():
+        if not OSUtil.isLinux():
             fmt = ColorFormatter()        
         else:
-            fmt = logging.Formatter(logging.BASIC_FORMAT,None)
+            fmt = logging.Formatter(DEFAULT_FORMAT,None)
             
         hdlr.setFormatter(fmt)
         
