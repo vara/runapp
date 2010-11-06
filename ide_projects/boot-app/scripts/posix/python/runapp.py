@@ -112,7 +112,7 @@ def printInfo():
 
 def printUsage():
 	printInfo()
-	file = open(SCRIPT_HOME+"/../usage.txt",'r')
+	file = open(os.path.dirname(SCRIPT_HOME)+os.path.sep+"usage.txt",'r')
 	content = file.read()
 	file.close()
 	print "%s" % content
@@ -150,6 +150,5 @@ def main(argv):
 		LOG.info("RUN APP")
 
 if __name__ == "__main__":
-#    main(sys.argv[1:])
-	print "Dir : ",commands.getoutput("dir")
+	main(sys.argv[1:])
 	exitScript()
