@@ -2,6 +2,7 @@
 
 import logging,formatter
 import os
+from utils.Utils import OSUtil
 from Handlers import ConsoleHandler
 from Formatters import ColorFormatter
 
@@ -18,7 +19,7 @@ class RALogger(logging.Logger):
         
     @staticmethod
     def initialize():
-        
+        logging.basicConfig
         for i in range(1,4):
             logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i+1))
             
@@ -31,7 +32,12 @@ class RALogger(logging.Logger):
             logging.getLogger().setLevel(int(debugLev))         
             
         hdlr = ConsoleHandler()
-        fmt = ColorFormatter()        
+        
+        if OSUtil.isLinux():
+            fmt = ColorFormatter()        
+        else:
+            fmt = logging.Formatter(logging.BASIC_FORMAT,None)
+            
         hdlr.setFormatter(fmt)
         
         logging.getLogger().addHandler(hdlr)
