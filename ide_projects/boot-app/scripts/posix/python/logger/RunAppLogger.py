@@ -35,7 +35,7 @@ class RALogger(logging.Logger):
             
         hdlr = ConsoleHandler()
         
-        if not OSUtil.isLinux():
+        if OSUtil.isLinux():
             fmt = ColorFormatter()        
         else:
             fmt = logging.Formatter(DEFAULT_FORMAT,None)
