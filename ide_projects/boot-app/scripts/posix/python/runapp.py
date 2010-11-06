@@ -66,36 +66,43 @@ def resolveJavaPath() :
 		if os.getenv(value) != None:
 			_javaBin = os.getenv(value)
 			break
-
+	#_javaBin = None
 	if _javaBin == None:
 		if OSUtil.isLinux() or OSUtil.isMac():
 			_javaBin = commands.getoutput('which java')
 		elif OSUtil.isWin():
 			try:
-				from _winreg import ConnectRegistry,OpenKey,QueryValueEx,CloseKey
+				from _winreg import ConnectRegistry,OpenKey,QueryValueEx,CloseKey, HKEY_LOCAL_MACHINE
 
+				LOG.debug("Try to resolve java path from windows registry")
 				aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
 				aKey1 = OpenKey(aReg, r"SOFTWARE\JavaSoft\Java Runtime Environment")
-				JRTVersion = QueryValueEx(aKey,"CurrentVersion")
-				aKey2 = OpenKey(aKey1, JRTVersion)
-				_javaBin = QueryValueEx(aKey,"JavaHome")
+				JRTVersion = QueryValueEx(aKey1,"CurrentVersion")
+				if JRTVersion:
+					LOG.debug("JRE ver. %s",JRTVersion[0])
+					aKey2 = OpenKey(aKey1, JRTVersion[0])
+					regVal = QueryValueEx(aKey2,"JavaHome")
+					CloseKey(aKey2)
+					if regVal :
+						_javaBin = regVal[0]
+				LOG.debug("Resolved java path is %s",_javaBin)
 
 				CloseKey(aKey1)
-				CloseKey(aKey2)
 				CloseKey(aReg)
 
 			except ImportError:
-				print "Module _winreg not found"
+				LOG.warn("Module _winreg not found, module needed for resolving Java installation path!")
 
 	if _javaBin !=  None:
-		if not _javaBin.endswith("/bin/java"):
-			_javaBin=_javaBin+"/bin/java"
+		suffix = os.sep+"bin"+os.sep+"java"
+		if not _javaBin.endswith(suffix):
+			_javaBin += suffix
 		_javaBin = FSUtil.resolveSymlink(_javaBin)
 
 	return _javaBin
 
 def readConfig():
-	for prefix in ("",CWD+"/",USER_DIR+"/"):
+	for prefix in ("",CWD+os.sep,USER_DIR+os.sep):
 		conf_fp = prefix+CONFIG_FP
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug( "ConfigFP:%s",conf_fp)
@@ -112,7 +119,7 @@ def printInfo():
 
 def printUsage():
 	printInfo()
-	file = open(os.path.dirname(SCRIPT_HOME)+os.path.sep+"usage.txt",'r')
+	file = open(os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt",'r')
 	content = file.read()
 	file.close()
 	print "%s" % content
