@@ -25,14 +25,14 @@ LOG = logging.getLogger("runapp")
 # SCRIPT_HOME   -- Path to directory where is this script placed
 # JAVA_BIN      -- path to java executable file
 # WAIT_ON_EXIT  -- wait, before exit script
-# TESTING_MODE  -- dont call main program
+# TESTING_MODE  -- don't call main program
 # PROVIDER      -- java|maven (Default:java)
 # DEBUG         -- number of debug level (default:None)
 # EXEC_TOOL     -- Tool for execution JVM
 
 # CONFIG_FP     -- Path to configuration file
 # DEPENDENCY_FP -- Path to dependency file path
-# JVM_ARGS_FP   -- Path to file with jvm argumnets
+# JVM_ARGS_FP   -- Path to file with jvm arguments
 
 # MAINCLASS     -- Boot class
 # PROJECT_DIR   -- Path to root directory calling project
@@ -40,6 +40,7 @@ LOG = logging.getLogger("runapp")
 # USER_ARGS_TO_APP --All arguments passed by user
 #
 # COMMENTCHAR   -- Used in configuration files
+# USAGE_FP      -- Path to file with text for usage information
 
 COMMENTCHAR   = '#'
 USER_DIR      = os.path.expanduser('~')
@@ -53,6 +54,7 @@ DEPENDENCY_FP = os.getenv("DEPENDENCY_FP","runapp.dep")
 JVM_ARGS_FP   = os.getenv("JVM_ARGS_FP","runapp.jvmargs")
 
 TESTING_MODE  = os.getenv("TESTING_MODE")
+USAGE_FP      = os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt"
 
 def exitScript():
 
@@ -119,7 +121,7 @@ def printInfo():
 
 def printUsage():
 	printInfo()
-	file = open(os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt",'r')
+	file = open(USAGE_FP,'r')
 	content = file.read()
 	file.close()
 	print "%s" % content
