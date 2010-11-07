@@ -1,2 +1,0 @@
-#!/bin/sh
-g++ -o out main.cpp

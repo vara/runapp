@@ -20,7 +20,7 @@
 PATH=".:$PATH"
 
 timer() {
-  timerC $*
+  timerD $*
 }
 
 #
