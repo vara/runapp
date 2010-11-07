@@ -11,21 +11,21 @@ LOG = logging.getLogger("configuration")
 PROVIDERS = ("java","maven")
 
 class KeyEntry(object):
-	_key = None
-	_defaultVal = None
+	__key = None
+	__defaultVal = None
 
 	def __init__(self,key,defaultValue=None):
-		self._key = key
-		self._defaultVal = defaultValue
+		self.__key = key
+		self.__defaultVal = defaultValue
 
 	def getKey(self):
-		return self._key
+		return self.__key
 
 	def getDefaultValue(self):
-		return self._defaultVal
+		return self.__defaultVal
 
 	def __str__(self):
-		return "KeyEntry["+str(self._key)+","+str(self._defaultVal)+"] on "+hex(id(self))
+		return "KeyEntry["+str(self.__key)+","+str(self.__defaultVal)+"] on "+hex(id(self))
 
 
 class _Env (object):

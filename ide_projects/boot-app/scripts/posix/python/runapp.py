@@ -9,23 +9,25 @@ import os
 import sys
 import commands
 import time
-import logging
 import getopt
 import optparse
-
-from utils.Utils import OSUtil, FSUtil, Timer
+from logger import RunAppLogger
 from logger.RunAppLogger import RALogger
-from Configuration import Config,Keys, env
+from utils.Utils import OSUtil, FSUtil, Timer
+from configuration.Configuration import Config,Keys, env
+from configuration.Parser import ParserManger
+import configuration.BashParser
+
+
+VERSION       = "1.0.0"
+SCRIPT_HOME   = os.path.dirname(FSUtil.resolveSymlink(sys.argv[0]))
+USAGE_FP      = os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt"
 
 RALogger.initialize()
 RALogger.setRootDebugLevel()
+LOG = RunAppLogger.getLogger("runapp")
+ParserManger.registerParser("bash-parser", configuration.BashParser.BashParser())
 
-LOG = logging.getLogger("runapp")
-
-VERSION       = "1.0.0"
-
-SCRIPT_HOME   = os.path.dirname(FSUtil.resolveSymlink(sys.argv[0]))
-USAGE_FP      = os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt"
 
 def exitScript(exitCode=0):
 	wait = Keys.iValue(Keys.WAIT_ON_EXIT)
@@ -35,29 +37,18 @@ def exitScript(exitCode=0):
 
 	exit(exitCode)
 
-def readConfig():
+def readConfig(path,parserName="bash-parser"):
 
 	if os.path.exists(Config.getConfigFP()) :
 
-		commentChar = Config.getCommentChar()
+		parser = ParserManger.getParserByName(parserName)
+		if parser:
+			parser.open(path)
+			results = parser.results()
 
-		file = open(Config.getConfigFP(),'r')
-		fLines = file.readlines()
-		file.close()
-
-		for line in fLines:
-			line = line.strip()
-			if not len(line) == 0:
-				index = line.find(commentChar)
-				if index != -1:
-					line = line[:index]
-
-				if not len(line) == 0:
-					index = line.index('=')
-					key = line[:index]
-					val = line[index+1:]
-
-					env.put(key,val)
+			LOG.debug(" ***Results of parsed file: %s",results)
+		else:
+			LOG.warn("Parser '%s' not found !",parserName)
 
 	else:
 		LOG.warn("Config file '%s' not exist",Config.getConfigFP())
@@ -87,7 +78,7 @@ def initConfigurationFile(argPath):
 	if os.path.isdir(argPath):
 		os.chdir(argPath)
 
-		if LOG.isEnabledFor(logging.DEBUG):
+		if LOG.isEnabledFor(RunAppLogger.DEBUG):
 			LOG.debug("Directory changed to : %s", os.getcwd())
 		retVal = True
 
@@ -105,6 +96,16 @@ def main(arguments):
 	if len(arguments)>0:
 		if initConfigurationFile(arguments[0]):
 			arguments = arguments[1:]
+
+	# Read config should be before cmdl parsing
+	# Allow us to overriding parameters defined in config file
+	# Is useful for testing app, when i wants quick change variable
+
+	LOG.debug("Get var. 'M2': %s", Keys.retrieveValue("M2"))
+
+	readConfig(Config.getConfigFP())
+
+	LOG.debug("Get var. 'M2': %s", Keys.retrieveValue("M2"))
 
 	try:
 		opts, args = getopt.getopt(arguments, "hp:c:ve:", ["help","version","testingMode","provider=","conf=","exec="])
@@ -150,11 +151,7 @@ def main(arguments):
 #	LOG.debug("Script Home: %s ",SCRIPT_HOME)
 	LOG.info("Path to java : %s", Config.getJavaBinPath())
 #	LOG.info("Java-Version : %s",commands.getoutput(JAVA_BIN + " -version"))
-
-	print Keys.retrieveValue("M2")
-	readConfig()
-	print Keys.retrieveValue("M2")
-
+	
 	LOG.info("Elapsed time of preparing of boot application %dms",Timer.time(START_TIME_MS))
 
 	if not Config.isTestingMode():
