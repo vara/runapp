@@ -11,23 +11,21 @@ import commands
 import time
 import getopt
 import optparse
-from logger import RunAppLogger
-from logger.RunAppLogger import RALogger
 from utils.Utils import OSUtil, FSUtil, Timer
 from configuration.Configuration import Config,Keys, env
 from configuration.Parser import ParserManger
-import configuration.BashParser
-
+from logger import RALogging
 
 VERSION       = "1.0.0"
 SCRIPT_HOME   = os.path.dirname(FSUtil.resolveSymlink(sys.argv[0]))
 USAGE_FP      = os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt"
 
-RALogger.initialize()
-RALogger.setRootDebugLevel()
-LOG = RunAppLogger.getLogger("runapp")
-ParserManger.registerParser("bash-parser", configuration.BashParser.BashParser())
+RALogging.initialize()
 
+#RALogger.setRootDebugLevel()
+
+LOG = RALogging.getLogger("runapp")
+LOG.setLevel(RALogging.DEBUG)
 
 def exitScript(exitCode=0):
 	wait = Keys.iValue(Keys.WAIT_ON_EXIT)
@@ -37,27 +35,40 @@ def exitScript(exitCode=0):
 
 	exit(exitCode)
 
+def readConfig2(path,parserName="bash-parser"):
+	if os.path.exists(path) :
+
+		parser = ParserManger.getParserByName(parserName)
+		if parser:
+			parser.setAutoUpdateEnv(False)
+			parser.open(path)
+			results = parser.results()
+			return results
+		else:
+			LOG.warn("Parser '%s' not found !",parserName)
+
+	else:
+		LOG.warn("Config file '%s' not exist",path)
+
 def readConfig(path,parserName="bash-parser"):
 
-	if os.path.exists(Config.getConfigFP()) :
+	if os.path.exists(path) :
 
 		parser = ParserManger.getParserByName(parserName)
 		if parser:
 			parser.open(path)
 			results = parser.results()
-
-			LOG.debug(" ***Results of parsed file: %s",results)
+			return results
 		else:
 			LOG.warn("Parser '%s' not found !",parserName)
 
 	else:
-		LOG.warn("Config file '%s' not exist",Config.getConfigFP())
+		LOG.warn("Config file '%s' not exist",path)
 #
 # Print info about this script
 #
 def printInfo():
 	print "Author: Grzegorz (vara) Warywoda\nContact: war29@wp.pl\nrunapp v%s\n" % VERSION
-
 
 def printUsage():
 	printInfo()
@@ -67,21 +78,26 @@ def printUsage():
 	print "%s" % content
 
 def initConfigurationFile(argPath):
+
 	retVal = None
 	argPath = FSUtil.resolveSymlink(os.path.expanduser(argPath))
-	print argPath
+
+	if LOG.isEnabledFor(RALogging.DEBUG):
+		LOG.debug("Initialize ROOT directory from path '%s'",argPath)
+
 	if os.path.isfile(argPath):
-		Config.setConfigFP(os.path.basename(argPath))
+
+		Config.setConfigFName(os.path.basename(argPath))
+
 		argPath = os.path.dirname(argPath)
 		retVal = True
 
 	if os.path.isdir(argPath):
-		os.chdir(argPath)
+		if os.getcwd() != argPath:
+			os.chdir(argPath)
+			Config.setProjectDir(os.getcwd())
 
-		if LOG.isEnabledFor(RunAppLogger.DEBUG):
-			LOG.debug("Directory changed to : %s", os.getcwd())
 		retVal = True
-
 	return retVal
 
 #######################################
@@ -101,17 +117,16 @@ def main(arguments):
 	# Allow us to overriding parameters defined in config file
 	# Is useful for testing app, when i wants quick change variable
 
-	LOG.debug("Get var. 'M2': %s", Keys.retrieveValue("M2"))
+	readConfig(Config.getConfigFName())
 
-	readConfig(Config.getConfigFP())
-
-	LOG.debug("Get var. 'M2': %s", Keys.retrieveValue("M2"))
+	Config.update()
 
 	try:
-		opts, args = getopt.getopt(arguments, "hp:c:ve:", ["help","version","testingMode","provider=","conf=","exec="])
+		opts, args = getopt.getopt(arguments, "hp:ve:d:m:", \
+				["help","version","testingMode","provider=","exec=","debug=","mainClass"])
 
 		LOG.debug('OPTIONS   : %s', opts)
-		LOG.debug('ARGS   : %s', args)
+		LOG.debug('ARGS      : %s', args)
 
 		for o,a in opts:
 
@@ -128,30 +143,39 @@ def main(arguments):
 			elif o in ("-p", "--provider"):
 				Config.setProvider(a)
 
-			elif o in ("-c", "--conf"):
+			elif o in ("-m", "--mainClass"):
 
-				Config.setConfigFP(a)
+				Config.setMainClass(a)
 
 			elif o in ("-e", "--exec"):
 
 				Config.setExecTool(a)
 
+			elif o in ("-d","--debug"):
+				RunAppLogger.RALogger.setRootDebugLevel(a)
+
 			else:
-				print "Not found or path {%s}" % o
+				LOG.warn("Not found or path {%s}" , o)
 
 	except getopt.GetoptError, e :
 		LOG.warn("Cmdl options %s",e)
 		printUsage()
 		exitScript(2)
 
+	argumentsToApp = Keys.USER_ARGS_TO_APP.fromEnv()+" "+''.join(args)
+
+	print "app args: ",argumentsToApp
+
+	print readConfig2(Config.getDependencyFName())
+
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
 		exitScript()
 
-#	LOG.debug("Script Home: %s ",SCRIPT_HOME)
+	LOG.debug("Script Home: %s ",SCRIPT_HOME)
 	LOG.info("Path to java : %s", Config.getJavaBinPath())
-#	LOG.info("Java-Version : %s",commands.getoutput(JAVA_BIN + " -version"))
-	
+	LOG.info("Java-Version : %s",commands.getoutput(Config.getJavaBinPath() + " -version"))
+
 	LOG.info("Elapsed time of preparing of boot application %dms",Timer.time(START_TIME_MS))
 
 	if not Config.isTestingMode():

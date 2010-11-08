@@ -20,31 +20,6 @@ class RALogger(logging.Logger):
 	def __init__(self,name):
 		logging.Logger.__init__(self,name,0)
 
-	@staticmethod
-	def initialize():
-		logging.basicConfig
-		for i in range(1,4):
-			logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i+1))
-
-		logging.addLevelName(TRACE,"TRACE")
-		logging.getLogger().setLevel(logging.INFO)
-
-		debugLev = os.getenv("DEBUG")
-
-		if debugLev:
-			logging.getLogger().setLevel(int(debugLev))
-
-		hdlr = ConsoleHandler()
-
-		if OSUtil.isLinux():
-			fmt = ColorFormatter()
-		else:
-			fmt = logging.Formatter(DEFAULT_FORMAT,None)
-
-		hdlr.setFormatter(fmt)
-
-		logging.getLogger().addHandler(hdlr)
-
 	def setDebugLevel(self,intVal):
 		try:
 			initVal = min((9,intVal)) + logging.DEBUG
@@ -90,6 +65,30 @@ class RALogger(logging.Logger):
 			logging.getLogger().setLevel(level)
 		except:
 			logging.warn("You try set wrong level ! [%s]",level)
+
+def initialize():
+	logging.basicConfig
+	for i in range(1,4):
+		logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i+1))
+
+	logging.addLevelName(TRACE,"TRACE")
+	logging.getLogger().setLevel(logging.INFO)
+
+	debugLev = os.getenv("DEBUG")
+
+	if debugLev:
+		logging.getLogger().setLevel(int(debugLev))
+
+	hdlr = ConsoleHandler()
+
+	if OSUtil.isLinux():
+		fmt = ColorFormatter()
+	else:
+		fmt = logging.Formatter(DEFAULT_FORMAT,None)
+
+	hdlr.setFormatter(fmt)
+
+	logging.getLogger().addHandler(hdlr)
 
 def getLogger(name):
 	return logging.getLogger(name)

@@ -2,12 +2,12 @@
 
 import os
 import re
-import logging
 
 from configuration.Configuration import env,Config
-from utils import Utils 
+from utils import Utils
+from logger import RALogging
 
-LOG = logging.getLogger("config-parser")
+LOG = RALogging.getLogger("config-parser")
 
 class ConfigParser:
 	__cachedResults =None
