@@ -33,7 +33,7 @@ class _Env (object):
 
 	def __init__(self):
 		if not _Env._dict:
-			_Env._dict = dict(os.environ.items())
+			_Env._dict = dict()
 
 	@staticmethod
 	def put(kEntry,value):
@@ -42,21 +42,40 @@ class _Env (object):
 		_Env._dict.update( [[kEntry , value]] )
 
 	@staticmethod
-	def getVal(kEntry):
-		defVal = None
+	def put(dic):
+		LOG.debug("Insert to map %s",dict)
+		_Env._dict.update( dic )
+
+	@staticmethod
+	def getVal(kEntry,defaultVal=None):
+
+		retValue = None
 		if kEntry:
 			if isinstance(kEntry,KeyEntry):
-				defVal = kEntry.getDefaultValue()
+				if not defaultVal:
+					defaultVal = kEntry.getDefaultValue()
 				kEntry = kEntry.getKey()
 
-			val = _Env._dict.get(kEntry)
-			if val: 	return val
+			retValue = _Env._dict.get(kEntry)
+			if not retValue:
+				retValue = os.getenv(kEntry)
 
-		return defVal
+		if not retValue: retValue = defaultVal
+
+		#LOG.debug("GetValue for Key: '%s', default: '%s' return: %s",kEntry,defaultVal,retValue)
+		return retValue
+
+	@staticmethod
+	def getKeys():
+		return _Env._dict.keys()
 
 	@staticmethod
 	def prints():
 		print _Env._dict
+
+	@staticmethod
+	def getDic():
+		return _Env._dict
 
 env = _Env()
 
