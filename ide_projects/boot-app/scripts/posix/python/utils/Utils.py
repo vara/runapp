@@ -13,6 +13,14 @@ import commands
 
 LOG = logging.getLogger("utils.logger")
 
+def getClass( clazz ):
+	parts = clazz.split('.')
+	module = ".".join(parts[:-1])
+	m = __import__( module )
+	for comp in parts[1:]:
+		m = getattr(m, comp)
+	return m
+
 def resolveJavaPath() :
 
 	for value in ("JAVA_HOME","JRE_HOME","JDK_HOME") :
