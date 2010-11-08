@@ -3,8 +3,6 @@
 import os
 import sys
 import logging
-import UserDict
-from utils import Utils
 from types import *
 
 LOG = logging.getLogger("configuration")
@@ -86,11 +84,11 @@ class _Env (object):
 		print _Env._dict
 		print os.environ
 
-	@staticmethod
-	def getLocalEnv():
-		""" Return dictionary of local variables"""
-
-		return _Env._dict
+#	@staticmethod
+#	def getLocalEnv():
+#		""" Return dictionary of local variables"""
+#
+#		return _Env._dict
 
 	@staticmethod
 	def export(key,value=None):
@@ -157,6 +155,8 @@ class Keys(object):
 
 	USER_ARGS_TO_APP = KeyEntry("USER_ARGS_TO_APP","")
 
+	LOG_CONF_FP = KeyEntry("LOG_CONF_FP","resources/configuration/logger/logging.conf")
+
 	"""test"""
 	_HOME = KeyEntry("HOME")
 	_M2 = KeyEntry("M2")
@@ -171,7 +171,8 @@ class Keys(object):
 			  WAIT_ON_EXIT, \
 			  _HOME,_M2, \
 			  PRJ_DIR, \
-			  USER_ARGS_TO_APP)
+			  USER_ARGS_TO_APP, \
+			  LOG_CONF_FP)
 
 	@staticmethod
 	def retrieveValue(entry):
@@ -197,6 +198,11 @@ class Keys(object):
 				return key
 
 		return None
+
+	@staticmethod
+	def printAllKeys():
+		for key in Keys._list:
+			print key
 
 class Config(object):
 
@@ -227,11 +233,11 @@ class Config(object):
 		Config._jvmArgumentsFName = Keys.retrieveValue(Keys.JVM_ARGS_FName)
 
 		Config._M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
-		print "!!!!!!! ",Config._M2RepositoryFP 
+		LOG.info("!!!!!!! %s",Config._M2RepositoryFP)
 		if not Config._M2RepositoryFP:
 			env.put(Keys.M2_REPOSITORY,Config.getM2Repository())
 			Config._M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
-			print "!!!!!!! ",Config._M2RepositoryFP
+			LOG.info("!!!!!!! %s",Config._M2RepositoryFP)
 
 		Config._execTool = Keys.retrieveValue(Keys.EXEC_TOOL)
 		Config._mainClass = Keys.retrieveValue(Keys.MAIN_CLASS)
@@ -325,7 +331,15 @@ class Config(object):
 	@staticmethod
 	def getJavaBinPath():
 		if not Config._javaBinPath:
-			Config._javaBinPath = Utils.resolveJavaPath()
+			#!!! Invoked only once, uses for avoiding cyclic dependency with RALogging module.
+			#In function RALogging.initialize() is used Keys class
+
+			try:
+				from utils import Utils
+				Config._javaBinPath = Utils.resolveJavaPath()
+			except ImportError, e:
+				LOG.warn("Unable to load Utils module: %s",e)
+
 		return Config._javaBinPath
 
 	@staticmethod
