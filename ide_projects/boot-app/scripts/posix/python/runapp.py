@@ -152,7 +152,7 @@ def main(arguments):
 				Config.setExecTool(a)
 
 			elif o in ("-d","--debug"):
-				RunAppLogger.RALogger.setRootDebugLevel(a)
+				RALogging.setRootDebugLevel(a)
 
 			else:
 				LOG.warn("Not found or path {%s}" , o)
