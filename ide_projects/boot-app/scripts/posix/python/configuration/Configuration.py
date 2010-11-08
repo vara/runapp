@@ -5,6 +5,7 @@ import sys
 import logging
 import UserDict
 from utils import Utils
+from types import *
 
 LOG = logging.getLogger("configuration")
 
@@ -24,27 +25,37 @@ class KeyEntry(object):
 	def getDefaultValue(self):
 		return self.__defaultVal
 
+	def fromEnv(self):
+		return env.getVal(self.getKey(),self.getDefaultValue())
+
 	def __str__(self):
 		return "KeyEntry["+str(self.__key)+","+str(self.__defaultVal)+"] on "+hex(id(self))
 
 
 class _Env (object):
-	_dict = None
+
+	_dict = {}
+	_exported = []
 
 	def __init__(self):
 		if not _Env._dict:
 			_Env._dict = dict()
+			_Env._exported.extend(os.environ.keys())
 
 	@staticmethod
-	def put(kEntry,value):
-		LOG.debug("Insert to map %s:%s",kEntry,value)
+	def put(kEntry,value=None):
+		if kEntry:
 
-		_Env._dict.update( [[kEntry , value]] )
+			LOG.debug("Insert '%s':'%s' to enviroment variables",kEntry,value)
 
-	@staticmethod
-	def put(dic):
-		LOG.debug("Insert to map %s",dict)
-		_Env._dict.update( dic )
+			entryType = type(kEntry)
+
+			if entryType is DictType :
+				_Env._dict.update( kEntry )
+			elif entryType is ListType or entryType is TupleType:
+				_Env._dict.update( [ kEntry ] )
+			else:
+				_Env._dict.update( [[kEntry , value]] )
 
 	@staticmethod
 	def getVal(kEntry,defaultVal=None):
@@ -66,16 +77,47 @@ class _Env (object):
 		return retValue
 
 	@staticmethod
-	def getKeys():
+	def getLocalKeys():
 		return _Env._dict.keys()
 
 	@staticmethod
 	def prints():
+		print _Env._exported
 		print _Env._dict
+		print os.environ
 
 	@staticmethod
-	def getDic():
+	def getLocalEnv():
+		""" Return dictionary of local variables"""
+
 		return _Env._dict
+
+	@staticmethod
+	def export(key,value=None):
+		if key:
+			if not key in _Env._exported:
+				_Env._exported.append(key)
+			if not key in _Env._dict:
+				_Env.put(key,value)
+
+	@staticmethod
+	def unset(key):
+		if key:
+			if key in _Env._exported:
+				_Env._exported.remove(key)
+			if _Env._dict.has_key(key):
+				_Env._dict.pop(key)
+			if os.environ.has_key(key):
+				os.environ.pop(key)
+
+	@staticmethod
+	def getExportedVar():
+		list = []
+		for key in _Env._exported:
+			val = _Env.getVal(key)
+			list.append((key,val))
+		return dict(list)
+
 
 env = _Env()
 
@@ -103,28 +145,33 @@ env = _Env()
 
 class Keys(object):
 
-	CONFIG_FP = KeyEntry("CONFIG_FP","runapp.conf")
-	DEPENDENCY_FP = KeyEntry("DEPENDENCY_FP","runapp.dep")
-	JVM_ARGS_FP = KeyEntry("JVM_ARGS_FP","runapp.jvmargs")
+	CONFIG_FName = KeyEntry("CONFIG_FP","runapp.conf")
+	DEPENDENCY_FName = KeyEntry("DEPENDENCY_FP","runapp.dep")
+	JVM_ARGS_FName = KeyEntry("JVM_ARGS_FP","runapp.jvmargs")
 	EXEC_TOOL = KeyEntry("EXEC_TOOL")
 	M2_REPOSITORY = KeyEntry("M2_REPOSITORY")
 	MAIN_CLASS =  KeyEntry("MAINCLASS")
 	TESTING_MODE = KeyEntry("TESTING_MODE")
 	WAIT_ON_EXIT = KeyEntry("WAIT_ON_EXIT","1")
+	PRJ_DIR = KeyEntry("PROJECT_DIR")
+
+	USER_ARGS_TO_APP = KeyEntry("USER_ARGS_TO_APP","")
 
 	"""test"""
 	_HOME = KeyEntry("HOME")
 	_M2 = KeyEntry("M2")
 
-	_list = ( CONFIG_FP,
-			  DEPENDENCY_FP, \
-			  JVM_ARGS_FP, \
+	_list = ( CONFIG_FName,
+			  DEPENDENCY_FName, \
+			  JVM_ARGS_FName, \
 			  EXEC_TOOL, \
 			  M2_REPOSITORY, \
 			  MAIN_CLASS, \
 			  TESTING_MODE, \
-			  WAIT_ON_EXIT,
-			  _HOME,_M2)
+			  WAIT_ON_EXIT, \
+			  _HOME,_M2, \
+			  PRJ_DIR, \
+			  USER_ARGS_TO_APP)
 
 	@staticmethod
 	def retrieveValue(entry):
@@ -156,9 +203,9 @@ class Config(object):
 	_commentChar = '#'
 	_userDir = os.path.expanduser('~')
 
-	_configFP = Keys.retrieveValue(Keys.CONFIG_FP)
-	_dependencyFP = Keys.retrieveValue(Keys.DEPENDENCY_FP)
-	_jvmArgumentsFP = Keys.retrieveValue(Keys.JVM_ARGS_FP)
+	_configFName = Keys.retrieveValue(Keys.CONFIG_FName)
+	_dependencyFName = Keys.retrieveValue(Keys.DEPENDENCY_FName)
+	_jvmArgumentsFName = Keys.retrieveValue(Keys.JVM_ARGS_FName)
 
 	_M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
 
@@ -170,28 +217,63 @@ class Config(object):
 
 	_javaBinPath = None
 
-	@staticmethod
-	def getConfigFP():
-		return Config._configFP
+	_prjDir = os.getcwd()
 
 	@staticmethod
-	def getDependencyFP():
-		return Config._dependencyFP
+	def update():
+
+		#Config._configFP = Keys.retrieveValue(Keys.CONFIG_FP)
+		Config._dependencyFName = Keys.retrieveValue(Keys.DEPENDENCY_FName)
+		Config._jvmArgumentsFName = Keys.retrieveValue(Keys.JVM_ARGS_FName)
+
+		Config._M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
+		print "!!!!!!! ",Config._M2RepositoryFP 
+		if not Config._M2RepositoryFP:
+			env.put(Keys.M2_REPOSITORY,Config.getM2Repository())
+			Config._M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
+			print "!!!!!!! ",Config._M2RepositoryFP
+
+		Config._execTool = Keys.retrieveValue(Keys.EXEC_TOOL)
+		Config._mainClass = Keys.retrieveValue(Keys.MAIN_CLASS)
+		Config._testingMode  = Keys.retrieveValue(Keys.TESTING_MODE)
+
+
+
+	@staticmethod
+	def getProjectDir():
+		return Config._prjDir
+
+	@staticmethod
+	def setProjectDir(path):
+		Config._prjDir = path
+
+		env.put(Keys.PRJ_DIR,path)
+		
+		if LOG.isEnabledFor(logging.DEBUG):
+			LOG.debug("Project dir '%s' has been changed.",path)
+
+	@staticmethod
+	def getConfigFName():
+		return Config._configFName
+
+	@staticmethod
+	def getDependencyFName():
+		return Config._dependencyFName
 
 	@staticmethod
 	def getJVMArgsFP():
-		return Config._jvmArgumentsFP
+		return Config._jvmArgumentsFName
 
 	@staticmethod
-	def setConfigFP(path):
-		Config._configFP = path
+	def setConfigFName(path):
+		Config._configFName = path
 		
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Override configuration file name to '%s'.",path)
 
 	@staticmethod
-	def setDependencyFP(path):
-		Config._dependencyFP = path
+	def setDependencyFName(path):
+		Config._dependencyFName = path
 
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Override dependency file name to '%s'.",path)
@@ -204,8 +286,8 @@ class Config(object):
 			LOG.info("Provider has been set to %s",provider)
 
 	@staticmethod
-	def setJVMArgsFP(path):
-		Config._jvmArgumentsFP = path
+	def setJVMArgsFName(path):
+		Config._jvmArgumentsFName = path
 
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Override jvm_args file name to '%s'.",path)
