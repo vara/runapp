@@ -4,7 +4,8 @@ import os
 import re
 import logging
 
-from  configuration.Configuration import env,Config
+from configuration.Configuration import env,Config
+from utils import Utils 
 
 LOG = logging.getLogger("config-parser")
 
@@ -13,12 +14,20 @@ class ConfigParser:
 
 	__autoUpdateEnvironment = True
 
+	__allowToMultipleValues = False
+
 	def open(self,pathToFile):
+
+		LOG.debug("Prepare to read comfig file %s",pathToFile)
+
 		file = open(pathToFile,'r')
 		fLines = file.readlines()
 		file.close()
 
-		self.__cachedResults = {}
+		if not self.__cachedResults:
+			self.__cachedResults = {}
+		else:
+			self.__cachedResults.clear()
 
 		cch = Config.getCommentChar()
 		commentsPattern = re.compile(cch+'.*$')
@@ -32,7 +41,7 @@ class ConfigParser:
 					parsedLine = self.parseLine(line)
 
 					if parsedLine :
-						if self.__cachedResults.has_key(parsedLine[0]):
+						if self.__cachedResults.has_key(parsedLine[0]) and self.isAllowToMultipleValues() :
 
 							values = self.__cachedResults.get(parsedLine[0])
 
@@ -45,7 +54,7 @@ class ConfigParser:
 						self.__cachedResults.update([parsedLine])
 						
 						if self.__autoUpdateEnvironment == True:
-							env.getDic().update([parsedLine])
+							env.put(parsedLine)
 
 	def parseLine(self,line):
 		return line
@@ -64,26 +73,43 @@ class ConfigParser:
 	def isAutoUpdateEnv(self):
 		return self.__autoUpdateEnvironment
 
+	def setAllowToMultipleValues(self,value):
+
+		if isinstance(value,bool):
+			if self.__allowToMultipleValues != value:
+				self.__allowToMultipleValues = value
+
+	def isAllowToMultipleValues(self):
+		return self.__allowToMultipleValues
 
 class ParserManger:
 	__parsers = dict()
 
 	@staticmethod
 	def getParserByName(name):
+		parser = None
 		if ParserManger.__parsers.has_key(name):
-			return ParserManger.__parsers[name]
-		return None
+			moduleName = ParserManger.__parsers[name]
+
+			mod = Utils.getClass(moduleName)()
+
+			if isinstance(mod,ConfigParser):
+				parser = mod
+			else:
+				LOG.debug("Not recognized parser class '%s'. Object must inherited from %s",moduleName,ConfigParser)
+
+		return parser
 
 	@staticmethod
-	def registerParser(name,parser):
+	def registerParser(name,parserClassName):
 
-		if not isinstance(parser,ConfigParser):
-			#TODO: Throw exception
-			pass
-		else:
-			ParserManger.__parsers.update([[name,parser]])
+		if not isinstance(parserClassName,basestring):
+			raise TypeError("Second parameter must by a string type !")
+
+		ParserManger.__parsers.update([[name,parserClassName]])
 
 
+ParserManger.registerParser("bash-parser", "configuration.BashParser.BashParserImpl")
 
 
 
