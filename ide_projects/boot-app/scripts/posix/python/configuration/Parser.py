@@ -11,6 +11,8 @@ LOG = logging.getLogger("config-parser")
 class ConfigParser:
 	__cachedResults =None
 
+	__autoUpdateEnvironment = True
+
 	def open(self,pathToFile):
 		file = open(pathToFile,'r')
 		fLines = file.readlines()
@@ -41,6 +43,9 @@ class ConfigParser:
 							parsedLine[1] = values
 
 						self.__cachedResults.update([parsedLine])
+						
+						if self.__autoUpdateEnvironment == True:
+							env.getDic().update([parsedLine])
 
 	def parseLine(self,line):
 		return line
@@ -49,6 +54,15 @@ class ConfigParser:
 		retVal = (self.__cachedResults.items())
 		self.__cachedResults.clear()
 		return retVal
+
+	def setAutoUpdateEnv(self,value):
+
+		if isinstance(value,bool):
+			if self.__autoUpdateEnvironment != value:
+				self.__autoUpdateEnvironment = value
+
+	def isAutoUpdateEnv(self):
+		return self.__autoUpdateEnvironment
 
 
 class ParserManger:
