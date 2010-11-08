@@ -13,8 +13,8 @@ class ConsoleHandler(logging.StreamHandler):
     ConsoleHandler behaves.
     """
 
-    def __init__(self):
-        logging.StreamHandler.__init__(self)
+    def __init__(self,str=None):
+        logging.StreamHandler.__init__(self,str)
         self.stream = None # reset it; we are not going to use it anyway
 
     def emit(self, record):

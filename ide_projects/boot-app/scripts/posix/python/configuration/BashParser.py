@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import os
+import os,string
 from logger import RALogging
 from Parser import ConfigParser
-
 from configuration.Configuration import env,Config
 
-LOG = RALogging.getLogger("BashParser")
+LOG = RALogging.getLogger("parser-bash")
 
-def getIndex(text,pattern,fromIndex=0):
+
+def _strip_spaces(alist):
+	return map(lambda x: string.strip(x), alist)
+
+def _get_index(text,pattern,fromIndex=0):
 
 	#print "i:",fromIndex, " p:'",pattern,"' t:'",text,"'"
 
@@ -20,7 +23,7 @@ def getIndex(text,pattern,fromIndex=0):
 
 	return -1
 
-def isString(text):
+def _is_string(text):
 
 	if text:
 		if text[0] == '"' and text[len(text)-1] == '"':
@@ -28,18 +31,19 @@ def isString(text):
 
 	return False
 
-def normalize(text):
+def _normalize(text):
 
-	if isString(text) == True:
+	if _is_string(text) == True:
 		length = len(text)
 		text = text[1:length-1]
 
 	return text
 
-def replace(text,pattern,new):
+def _replace(text,pattern,new):
 	newText = text.replace(pattern,new,1)
 
-	LOG.debug(" ***Replace '%s' => '%s' : '%s'",pattern,new,newText)
+	if LOG.isDebug(3):
+		LOG.ndebug(3," ***Replace '%s' => '%s' : '%s'",pattern,new,newText)
 
 	return newText
 
@@ -59,7 +63,7 @@ class Command(object):
 		return value
 
 	def check(self,value):
-		index = getIndex(value,self.getName())
+		index = _get_index(value,self.getName())
 		if index != -1:
 			#self.__cachedIndex = index
 			return True
@@ -71,10 +75,13 @@ class ExportCommnad(Command):
 		Command.__init__(self,"export")
 
 	def parse(self,value):
-		value = replace(value,self.getName(),"")
+		value = _replace(value,self.getName(),"")
 		value=value.strip()
 		env.export(value)
-		LOG.debug("Exported vlaue '%s'",value)
+
+		if LOG.isDebug(2):
+			LOG.ndebug(2," ***Exported vlaue '%s'",value)
+
 		return value
 
 
@@ -98,9 +105,12 @@ class AltCommand(Command):
 			pass
 		else:
 			value = env.getVal(values[0])
-			LOG.debug(" ***Resloved lvalue. '%s'<=>'%s'",values[0],value)
+
+			if LOG.isDebug(2):
+				LOG.ndebug(2," ***Resloved lvalue. '%s'<=>'%s'",values[0],value)
+
 			if not value:
-				value = normalize(values[1])
+				value = _normalize(values[1])
 		return value
 
 
@@ -117,7 +127,8 @@ class BashParserImpl(ConfigParser):
 
 	def parseLine(self,line):
 
-		LOG.debug("Bash parser try parse line: '%s'",line)
+		if LOG.isDebug(1):
+			LOG.ndebug(1,"Bash parser try parse line: '%s'",line)
 
 		key = None
 		val = None
@@ -131,7 +142,7 @@ class BashParserImpl(ConfigParser):
 			key = line
 			val = None
 
-		val = normalize(val)
+		val = _normalize(val)
 
 		if val:
 			val = self.__parseRValue(val)
@@ -139,7 +150,8 @@ class BashParserImpl(ConfigParser):
 		if key:
 			key = self.__parseLValue(key)
 
-		LOG.debug(" *Set paire Key:Value to ['%s':'%s']",key,val)
+		if LOG.isDebug(1):
+			LOG.ndebug(1," *Set paire Key:Value to ['%s':'%s']",key,val)
 		
 		return [key,val]
 
@@ -150,14 +162,17 @@ class BashParserImpl(ConfigParser):
 
 		for actionCommand in self.__lCommands:
 			if actionCommand.check(lValue) == True:
-				LOG.debug(" **Found command for '%s'.",actionCommand.getName())
+
+				if LOG.isDebug(2):
+					LOG.ndebug(2," **Found command for '%s'.",actionCommand.getName())
+
 				lValue = actionCommand.parse(lValue)
 		return  lValue
 
 	def __parseRValue(self,value):
 
 		textLength = len(value)
-		index = getIndex(value,self.__marker,0)
+		index = _get_index(value,self.__marker,0)
 
 		clonedValue = value
 
@@ -165,7 +180,7 @@ class BashParserImpl(ConfigParser):
 
 			# For ${....}
 			if value[index+1] == self.__openBrace :
-				closeIndex = getIndex(value,self.__closeBrace,index+2)
+				closeIndex = _get_index(value,self.__closeBrace,index+2)
 				if closeIndex == -1:
 					#TODO:throw exception : syntax error - close brace not found
 					LOG.warn("Close brace not found !!!")
@@ -173,7 +188,9 @@ class BashParserImpl(ConfigParser):
 				else:
 					parameter = value[index+2 : closeIndex]
 
-					LOG.debug(" **Detected parameter on %s => %s ",(index,closeIndex),parameter)
+					if LOG.isDebug(2):
+						LOG.ndebug(2," **Detected parameter on %s => %s ",(index,closeIndex),parameter)
+
 					tmpValue = None
 					wasDone = False
 					#Search for special command parameter
@@ -181,7 +198,10 @@ class BashParserImpl(ConfigParser):
 
 						if actionCommand.check(parameter) == True:
 							wasDone = True
-							LOG.debug(" **Found command '%s' in parameter.",actionCommand.getName())
+
+							if LOG.isDebug(2):
+								LOG.ndebug(2," **Found command '%s' in parameter.",actionCommand.getName())
+
 							tmpValue = actionCommand.parse(parameter)
 							break
 					
@@ -189,15 +209,18 @@ class BashParserImpl(ConfigParser):
 						tmpValue = env.getVal(parameter,"")
 
 					if not tmpValue:	tmpValue = ''
-					LOG.debug(" **Resolved value : '%s'",tmpValue)
-					clonedValue = replace(clonedValue,value[index : closeIndex+1],tmpValue)
+
+					if LOG.isDebug(2):
+						LOG.ndebug(2," **Resolved value : '%s'",tmpValue)
+
+					clonedValue = _replace(clonedValue,value[index : closeIndex+1],tmpValue)
 					index = closeIndex # !!!
 
 			# For $VARIABLE
 			else:
 				index+=1
 
-				closeIndex = getIndex(value,' ',index)
+				closeIndex = _get_index(value,' ',index)
 				if closeIndex != -1:
 					allegedVarLength = closeIndex - index
 				else:
@@ -206,15 +229,17 @@ class BashParserImpl(ConfigParser):
 
 				variable = value[index:closeIndex]
 
-				LOG.debug(" **i:%d ci:%d len:%d value:'%s'",index,closeIndex,allegedVarLength,variable)
+				if LOG.isDebug(3):
+					LOG.ndebug(3," **i:%d ci:%d len:%d value:'%s'",index,closeIndex,allegedVarLength,variable)
 
 				tmpValue = env.getVal(variable,"")
 
-				LOG.debug(" **Resolved value : '%s'",tmpValue)
+				if LOG.isDebug(2):
+					LOG.ndebug(2," **Resolved value : '%s'",tmpValue)
 
-				clonedValue = replace(clonedValue,value[index-1 : closeIndex],tmpValue)
+				clonedValue = _replace(clonedValue,value[index-1 : closeIndex],tmpValue)
 
-			index = getIndex(value,self.__marker,index)
+			index = _get_index(value,self.__marker,index)
 
 		return clonedValue
 
@@ -222,9 +247,9 @@ class BashParserImpl(ConfigParser):
 
 	def __findParameter(self,value,fromIndex=0):
 
-		oIndex = getIndex(value,self.__openParam,fromIndex)
+		oIndex = _get_index(value,self.__openParam,fromIndex)
 		if oIndex != -1:
-			cIndex = getIndex(value,self.__closeBrace,oIndex+2)
+			cIndex = _get_index(value,self.__closeBrace,oIndex+2)
 			if cIndex == -1:
 				#TODO:throw exception : syntax error - close brace not found
 				return None

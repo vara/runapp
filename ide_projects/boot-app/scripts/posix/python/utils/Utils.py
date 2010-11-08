@@ -5,13 +5,13 @@
 # Since: 2010-11-03 14:25:36 CET
 #
 
-import os
-import sys
-import datetime
-import logging
-import commands
+import os, sys, datetime, commands, traceback
+from logger import RALogging
 
-LOG = logging.getLogger("utils.logger")
+LOG = RALogging.getLogger("utils.logger")
+
+def printStackTrace():
+	traceback.print_stack()
 
 def getClass( clazz ):
 	parts = clazz.split('.')

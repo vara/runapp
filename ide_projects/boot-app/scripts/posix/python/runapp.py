@@ -11,26 +11,30 @@ import commands
 import time
 import getopt
 import optparse
+from logger import RALogging
+
+RALogging.initialize()
+
 from utils.Utils import OSUtil, FSUtil, Timer
 from configuration.Configuration import Config,Keys, env
 from configuration.Parser import ParserManger
-from logger import RALogging
 
 VERSION       = "1.0.0"
 SCRIPT_HOME   = os.path.dirname(FSUtil.resolveSymlink(sys.argv[0]))
 USAGE_FP      = os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt"
 
-RALogging.initialize()
-
 #RALogger.setRootDebugLevel()
 
 LOG = RALogging.getLogger("runapp")
-LOG.setLevel(RALogging.DEBUG)
+#LOG.setLevel(RALogging.DEBUG)
 
 def exitScript(exitCode=0):
 	wait = Keys.iValue(Keys.WAIT_ON_EXIT)
 	if wait and wait>0:
-		LOG.debug("Wait on exit %d" , wait)
+
+		if LOG.isDebug(2):
+			LOG.ndebug(2,"Wait on exit %d" , wait)
+
 		time.sleep(wait)
 
 	exit(exitCode)
@@ -82,8 +86,8 @@ def initConfigurationFile(argPath):
 	retVal = None
 	argPath = FSUtil.resolveSymlink(os.path.expanduser(argPath))
 
-	if LOG.isEnabledFor(RALogging.DEBUG):
-		LOG.debug("Initialize ROOT directory from path '%s'",argPath)
+	if LOG.isDebug(1):
+		LOG.ndebug(1,"Initialize ROOT directory from path '%s'",argPath)
 
 	if os.path.isfile(argPath):
 
@@ -162,21 +166,23 @@ def main(arguments):
 		printUsage()
 		exitScript(2)
 
-	argumentsToApp = Keys.USER_ARGS_TO_APP.fromEnv()+" "+''.join(args)
+	argumentsToApp = Keys.USER_ARGS_TO_APP.fromEnv()+" ".join(args)
 
-	print "app args: ",argumentsToApp
+	LOG.debug("App argumnents: %s",argumentsToApp)
 
-	print readConfig2(Config.getDependencyFName())
+	LOG.info("Results of parsed dependency file : '%s' ",readConfig2(Config.getDependencyFName()))
 
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
 		exitScript()
 
-	LOG.debug("Script Home: %s ",SCRIPT_HOME)
+	LOG.ndebug(1,"Script Home: %s ",SCRIPT_HOME)
 	LOG.info("Path to java : %s", Config.getJavaBinPath())
 	LOG.info("Java-Version : %s",commands.getoutput(Config.getJavaBinPath() + " -version"))
 
 	LOG.info("Elapsed time of preparing of boot application %dms",Timer.time(START_TIME_MS))
+
+	#Keys.printAllKeys()
 
 	if not Config.isTestingMode():
 		LOG.info("RUN APP")

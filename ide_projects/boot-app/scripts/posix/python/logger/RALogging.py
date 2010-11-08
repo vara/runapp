@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import logging,formatter
 import os
-from utils.Utils import OSUtil
-from Handlers import ConsoleHandler
-from Formatters import ColorFormatter
+import sys
+import logging
+import logging.config
+import configuration.Configuration
+from configuration.Configuration import Keys
 
 TRACE = 5
 DEBUG5 = 6
@@ -13,7 +14,7 @@ DEBUG3 = 8
 DEBUG2 = 9
 DEBUG = logging.DEBUG
 
-DEFAULT_FORMAT = "[%(levelname)-7s] : %(message)s (%(filename)s:%(lineno)d)"
+
 
 class RALogger(logging.Logger):
 
@@ -27,16 +28,24 @@ class RALogger(logging.Logger):
 		except:
 			logging.warn("You try set wrong level ! [%s]",intVal)
 
-	def isDebugEnable(self):
-		return self.isEnabledFor(logging.DEBUG)
+	def debug(self,msg, *args, **kwargs):
+		#print "  !!! :",args
+		logging.Logger.debug(self,msg, *args,**kwargs)
 
-	def isDebugEnable(self,intVal):
-		try:
-			intVal=int(intVal)+logging.DEBUG
-		except:
-			intVal = logging.DEBUG
+	def ndebug(self,level,msg, *args, **kwargs):
 
-		return self.isEnabledFor(intVal)
+		level = RALogger.__fixLevel(logging.DEBUG,level)
+		if self.isEnabledFor(level):
+			self._log(level, msg, args, **kwargs)
+
+	def trace(self,msg, *args, **kwargs):
+
+		if self.isEnabledFor(TRACE):
+			self._log(TRACE, msg, args, **kwargs)
+
+	def isDebug(self,val=0):
+		level = RALogger.__fixLevel(logging.DEBUG,val)
+		return self.isEnabledFor(level)
 
 	def isWarn(self):
 		if self.disabled >=  logging.WARN:
@@ -49,54 +58,45 @@ class RALogger(logging.Logger):
 		return TRACE >= self.getEffectiveLevel()
 
 	@staticmethod
-	def isTraceEnable():
-		return logging.getLogger().isEnabledFor(logging.WARN)
+	def setRootDebugLevel(level=0):
 
-	@staticmethod
-	def isWarnEnable():
-		return logging.getLogger().isEnabledFor(logging.WARN)
-
-	@staticmethod
-	def setRootDebugLevel(level=None):
-		if not level:
-			level = 0
 		try:
-			level =  logging.DEBUG - min((4,level))
+			level =  RALogger.__fixLevel(logging.DEBUG,level)
 			logging.getLogger().setLevel(level)
 		except:
 			logging.warn("You try set wrong level ! [%s]",level)
 
+	@staticmethod
+	def __fixLevel(origLevel,diff=0):
+		level = origLevel
+		if origLevel == logging.DEBUG:
+			level = logging.DEBUG - min((4,diff))
+		return level
+
 def initialize():
-	logging.basicConfig
-	for i in range(1,4):
-		logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i+1))
+
+	for i in range(1,5) :
+		logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i))
 
 	logging.addLevelName(TRACE,"TRACE")
 	logging.getLogger().setLevel(logging.INFO)
+	logging.setLoggerClass(RALogger)
 
+	logging.config.fileConfig(Keys.LOG_CONF_FP.fromEnv())
+
+	#User can quickly override level from console
 	debugLev = os.getenv("DEBUG")
-
 	if debugLev:
-		logging.getLogger().setLevel(int(debugLev))
+		getLogger().setLevel(int(debugLev))
 
-	hdlr = ConsoleHandler()
 
-	if OSUtil.isLinux():
-		fmt = ColorFormatter()
-	else:
-		fmt = logging.Formatter(DEFAULT_FORMAT,None)
-
-	hdlr.setFormatter(fmt)
-
-	logging.getLogger().addHandler(hdlr)
-
-def getLogger(name):
+def getLogger(name=None):
 	return logging.getLogger(name)
 
 if __name__ == "__main__":
 
 	RALogger.initialize()
-	log = logging.getLogger("logger")
+	log = getLogger("logger")
 
 	print "Level is ", log.level
 	if log.isEnabledFor(logging.DEBUG):

@@ -7,7 +7,7 @@ from configuration.Configuration import env,Config
 from utils import Utils
 from logger import RALogging
 
-LOG = RALogging.getLogger("config-parser")
+LOG = RALogging.getLogger("parser-conf")
 
 class ConfigParser:
 	__cachedResults =None
@@ -18,7 +18,8 @@ class ConfigParser:
 
 	def open(self,pathToFile):
 
-		LOG.debug("Prepare to read comfig file %s",pathToFile)
+		if LOG.isDebug():
+			LOG.debug("Prepare to read comfig file %s",pathToFile)
 
 		file = open(pathToFile,'r')
 		fLines = file.readlines()
@@ -96,7 +97,7 @@ class ParserManger:
 			if isinstance(mod,ConfigParser):
 				parser = mod
 			else:
-				LOG.debug("Not recognized parser class '%s'. Object must inherited from %s",moduleName,ConfigParser)
+				LOG.warn("Not recognized parser class '%s'. Object must inherited from %s",moduleName,ConfigParser)
 
 		return parser
 
