@@ -37,7 +37,7 @@ class ConfigParser:
 	def open(self,pathToFile):
 
 		if LOG.isDebug():
-			LOG.debug("Prepare to read comfig file %s",pathToFile)
+			LOG.debug("Prepare to read config file %s",pathToFile)
 
 		file = open(pathToFile,'r')
 		fLines = file.readlines()
