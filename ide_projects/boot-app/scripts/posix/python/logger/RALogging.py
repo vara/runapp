@@ -84,8 +84,13 @@ def initialize():
 	logging.getLogger().setLevel(logging.INFO)
 	logging.setLoggerClass(RALogger)
 	absPath = os.path.join(Config.getScriptRootPath(),Keys.LOG_CONF_FP.fromEnv())
-	
-	logging.config.fileConfig(absPath)
+
+	if os.path.exists(absPath):
+		logging.config.fileConfig(absPath)
+	else:
+		logging.basicConfig(level=logging.INFO)
+		getLogger().warn("Path \n\t => '%s'\n not found !"
+					"... Logger has been configured basing on defult implementation.",absPath)
 
 	#User can quickly override level from console
 	debugLev = os.getenv("DEBUG")
