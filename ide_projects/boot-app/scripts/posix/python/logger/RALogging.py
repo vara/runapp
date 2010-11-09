@@ -5,7 +5,7 @@ import sys
 import logging
 import logging.config
 import configuration.Configuration
-from configuration.Configuration import Keys
+from configuration.Configuration import Keys,Config
 
 TRACE = 5
 DEBUG5 = 6
@@ -13,7 +13,6 @@ DEBUG4 = 7
 DEBUG3 = 8
 DEBUG2 = 9
 DEBUG = logging.DEBUG
-
 
 
 class RALogger(logging.Logger):
@@ -63,6 +62,9 @@ class RALogger(logging.Logger):
 		try:
 			level =  RALogger.__fixLevel(logging.DEBUG,level)
 			logging.getLogger().setLevel(level)
+
+			getLogger().info("Set %s on ROOT logger.",logging._levelNames[level])
+
 		except:
 			logging.warn("You try set wrong level ! [%s]",level)
 
@@ -81,8 +83,8 @@ def initialize():
 	logging.addLevelName(TRACE,"TRACE")
 	logging.getLogger().setLevel(logging.INFO)
 	logging.setLoggerClass(RALogger)
-
-	logging.config.fileConfig(Keys.LOG_CONF_FP.fromEnv())
+	absPath = os.path.join(Config.getScriptLocation(),Keys.LOG_CONF_FP.fromEnv())
+	logging.config.fileConfig(absPath)
 
 	#User can quickly override level from console
 	debugLev = os.getenv("DEBUG")
