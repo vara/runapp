@@ -12,16 +12,22 @@ import time
 import getopt
 import optparse
 from logger import RALogging
+from logger.RALogging import RALogger
+import subprocess
+import signal
 
 RALogging.initialize()
 
+from utils import Utils
 from utils.Utils import OSUtil, FSUtil, Timer
 from configuration.Configuration import Config,Keys, env
 from configuration.Parser import ParserManger
 
+START_TIME_MS = Timer.time()
+
 VERSION       = "1.0.0"
-SCRIPT_HOME   = os.path.dirname(FSUtil.resolveSymlink(sys.argv[0]))
-USAGE_FP      = os.path.dirname(SCRIPT_HOME)+os.sep+"usage.txt"
+
+USAGE_FP      = os.path.dirname(Config.getScriptLocation())+os.sep+"usage.txt"
 
 #RALogger.setRootDebugLevel()
 
@@ -68,6 +74,19 @@ def readConfig(path,parserName="bash-parser"):
 
 	else:
 		LOG.warn("Config file '%s' not exist",path)
+
+
+def __toCommandLineString(list,separator=':'):
+
+	cmdLine = ""
+
+	for (k,v) in list:
+		cmdLine += k
+		if v:
+			cmdLine+="="+v
+		cmdLine+=separator
+
+	return cmdLine
 #
 # Print info about this script
 #
@@ -100,41 +119,32 @@ def initConfigurationFile(argPath):
 		if os.getcwd() != argPath:
 			os.chdir(argPath)
 			Config.setProjectDir(os.getcwd())
-
 		retVal = True
+
 	return retVal
 
-#######################################
-#                                     #
-# This is Entry point for this script #
-#                                     #
-#######################################
+def checkPaths(list,autoRemove=True):
+	for k,v in list:
+		if not os.path.exists(k):
+			LOG.warn("!!! NOT EXIST '%s'",k)
+			list.remove((k,v))
 
-def main(arguments):
-	START_TIME_MS = Timer.time()
+	return list
 
-	if len(arguments)>0:
-		if initConfigurationFile(arguments[0]):
-			arguments = arguments[1:]
-
-	# Read config should be before cmdl parsing
-	# Allow us to overriding parameters defined in config file
-	# Is useful for testing app, when i wants quick change variable
-
-	readConfig(Config.getConfigFName())
-
-	Config.update()
+def parseArguments(arguments):
 
 	try:
-		opts, args = getopt.getopt(arguments, "hp:ve:d:m:", \
-				["help","version","testingMode","provider=","exec=","debug=","mainClass"])
+		opts, args = getopt.getopt(arguments, "hp:ve:d:", \
+				["help","version","testingMode","provider=","exec=","debug=","mainClass","testingMode"])
 
-		LOG.debug('OPTIONS   : %s', opts)
-		LOG.debug('ARGS      : %s', args)
+		if LOG.isTrace:
+			LOG.trace('OPTIONS   : %s', opts)
+			LOG.trace('ARGS      : %s', args)
 
 		for o,a in opts:
 
-			LOG.debug("Parsing option %s <=> %s",o,a)
+			if LOG.isDebug(2):
+				LOG.ndebug(2,"Parsing option %s <=> %s",o,a)
 
 			if o in ("-h", "--help"):
 				printUsage()
@@ -147,45 +157,119 @@ def main(arguments):
 			elif o in ("-p", "--provider"):
 				Config.setProvider(a)
 
-			elif o in ("-m", "--mainClass"):
-
+			elif o in ("--mainClass",):
 				Config.setMainClass(a)
+
+			elif o in ("--testingMode",):
+				Config.setTestingMode(True)
 
 			elif o in ("-e", "--exec"):
 
 				Config.setExecTool(a)
 
 			elif o in ("-d","--debug"):
-				RALogging.setRootDebugLevel(a)
+				RALogger.setRootDebugLevel(a)
 
 			else:
 				LOG.warn("Not found or path {%s}" , o)
+
+
+		return args
 
 	except getopt.GetoptError, e :
 		LOG.warn("Cmdl options %s",e)
 		printUsage()
 		exitScript(2)
 
-	argumentsToApp = Keys.USER_ARGS_TO_APP.fromEnv()+" ".join(args)
+PROCESS = None
 
-	LOG.debug("App argumnents: %s",argumentsToApp)
+def trapHandler(signal,stackFrame):
+	if LOG.isDebug():
+		LOG.debug("sig:%d",signal)
 
-	LOG.info("Results of parsed dependency file : '%s' ",readConfig2(Config.getDependencyFName()))
+#######################################
+#                                     #
+# This is Entry point for this script #
+#                                     #
+#######################################
+
+def main(rawArgs):
+
+	if len(rawArgs)>0:
+		if initConfigurationFile(rawArgs[0]):
+			rawArgs = rawArgs[1:]
+
+	# Read config should be before cmdl parsing
+	# Allow us to overriding parameters defined in config file
+	# Is useful for testing app, when i wants quick change variable
+
+	readConfig(Config.getConfigFName())
+
+	Config.update()
+
+	args = parseArguments(rawArgs)
+
+	argumentsToApp = Keys.USER_ARGS_TO_APP.fromEnv()+' '+Utils.toString(args)
 
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
 		exitScript()
 
-	LOG.ndebug(1,"Script Home: %s ",SCRIPT_HOME)
-	LOG.info("Path to java : %s", Config.getJavaBinPath())
-	LOG.info("Java-Version : %s",commands.getoutput(Config.getJavaBinPath() + " -version"))
+	if not Config.getMainClass():
+		LOG.error("Main class not found. Please set 'MAINCLASS' variable.")
+		exitScript(2)
+
+	dependency = __toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
+	jvmArgs = __toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
+
+	provider = Config.getProvider().lower()
+
+	execPath = None
+	execArgs = None
+
+	if provider == "java":
+
+		execPath = Config.getJavaBinPath()
+		execArgs = jvmArgs
+
+		if len(dependency) > 1:
+			execArgs += " -cp "+dependency
+
+		execArgs += " "+Config.getMainClass()+" "+argumentsToApp
+
+	elif provider == "maven":
+		LOG.warn("Maven provider not implenebted yet !")
+		exitScript(0)
+	else:
+		LOG.error("Unrecongnized provider %s !",provider)
+		exitScript(2)
+
+	if LOG.isDebug():
+
+		LOG.debug("Exec tool: '%s'",Config.getExecTool())
+		LOG.debug("Exec path: '%s'",execPath)
+		LOG.debug("JVM Parameters: '%s'",jvmArgs)
+		LOG.debug("Main class: '%s'",Config.getMainClass())
+		LOG.debug("User args: '%s'",argumentsToApp)
 
 	LOG.info("Elapsed time of preparing of boot application %dms",Timer.time(START_TIME_MS))
 
-	#Keys.printAllKeys()
-
 	if not Config.isTestingMode():
-		LOG.info("RUN APP")
+		workingTime = Timer.time()
+		cmd = Utils.toString( (Config.getExecTool(),execPath,execArgs))
+		process = subprocess.Popen(cmd, shell=True)
+
+		if LOG.isDebug():
+			LOG.debug("Created new process with PID:%d.",process.pid)
+
+		signal.signal(signal.SIGINT,trapHandler)
+
+		process.wait()
+
+		LOG.info("Application working time: %d",Timer.time(workingTime))
+
+		LOG.debug("The application has finished work ! [exitcode:%d]",process.returncode)
+
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
