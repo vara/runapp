@@ -46,7 +46,7 @@ class _Env (object):
 		if kEntry:
 
 			if LOG.isEnabledFor(logging.DEBUG):
-				LOG.debug("Insert '%s':'%s' to enviroment variables",kEntry,value)
+				LOG.debug("Insert '%s' to enviroment variables",kEntry)
 
 			entryType = type(kEntry)
 
@@ -157,14 +157,14 @@ class Keys(object):
 	CONFIG_FName = KeyEntry("CONFIG_FP","runapp.conf")
 	DEPENDENCY_FName = KeyEntry("DEPENDENCY_FP","runapp.dep")
 	JVM_ARGS_FName = KeyEntry("JVM_ARGS_FP","runapp.jvmargs")
-	EXEC_TOOL = KeyEntry("EXEC_TOOL")
+	EXEC_TOOL = KeyEntry("EXEC_TOOL","")
 	M2_REPOSITORY = KeyEntry("M2_REPOSITORY")
 	MAIN_CLASS =  KeyEntry("MAINCLASS")
 	TESTING_MODE = KeyEntry("TESTING_MODE")
 	WAIT_ON_EXIT = KeyEntry("WAIT_ON_EXIT","1")
-	PRJ_DIR = KeyEntry("PROJECT_DIR")
+	PRJ_DIR = KeyEntry("PROJECT_DIR",os.getcwd())
 
-	USER_ARGS_TO_APP = KeyEntry("USER_ARGS_TO_APP","")
+	USER_ARGS_TO_APP = KeyEntry("USER_ARGS_TO_APP",'')
 
 	LOG_CONF_FP = KeyEntry("LOG_CONF_FP","resources/configuration/logger/logging.conf")
 
@@ -237,6 +237,8 @@ class Config(object):
 
 	_prjDir = os.getcwd()
 
+	__scriptLocation = None
+
 	@staticmethod
 	def update():
 
@@ -251,6 +253,12 @@ class Config(object):
 		_execTool = Keys.EXEC_TOOL.fromEnv()
 		_mainClass = Keys.MAIN_CLASS.fromEnv()
 		_testingMode  = Keys.TESTING_MODE.fromEnv()
+
+	@staticmethod
+	def getScriptLocation():
+		if not Config.__scriptLocation:
+			Config.__scriptLocation = os.path.dirname(os.path.abspath(sys.argv[0]))
+		return Config.__scriptLocation 
 
 	@staticmethod
 	def getProjectDir():
@@ -308,6 +316,7 @@ class Config(object):
 	@staticmethod
 	def setExecTool(tool):
 		Config._execTool = tool
+		env.put(Keys.EXEC_TOOL,tool)
 
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Set exec tool '%s'.",tool)
@@ -315,6 +324,7 @@ class Config(object):
 	@staticmethod
 	def setMainClass(mainClass):
 		Config._mainClass = mainClass
+		env.put(Keys.MAIN_CLASS,mainClass)
 
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Set main class to '%s'.",mainClass)
@@ -355,10 +365,15 @@ class Config(object):
 
 	@staticmethod
 	def getExecTool():
+		if not Config._execTool:
+			Config._execTool = Keys.EXEC_TOOL.fromEnv()
 		return Config._execTool
 
 	@staticmethod
 	def getMainClass():
+		if not Config._mainClass:
+			Config._mainClass = Keys.MAIN_CLASS.fromEnv()
+
 		return Config._mainClass
 
 	@staticmethod
