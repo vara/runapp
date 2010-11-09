@@ -9,6 +9,24 @@ from logger import RALogging
 
 LOG = RALogging.getLogger("parser-conf")
 
+class ConfigParserInfo:
+
+	_fileName = None
+	_currentNumber = 0
+	_totalLineNumbers = 0
+
+	def __init__(self,fileName):
+		self._fileName = fileName
+
+	def getFileName(self):
+		return self._fileName
+
+	def getLineNumber(self):
+		return self._currentNumber
+
+	def getTotalLineNumbers(self):
+		return self._totalLineNumbers
+
 class ConfigParser:
 	__cachedResults =None
 
@@ -30,35 +48,58 @@ class ConfigParser:
 		else:
 			self.__cachedResults.clear()
 
+		info = ConfigParserInfo(pathToFile)
+
 		cch = Config.getCommentChar()
 		commentsPattern = re.compile(cch+'.*$')
 
-		for line in fLines:
-			line = line.strip()
-			if not len(line) == 0:
-				line = commentsPattern.sub("",line,0)
-				if not len(line) == 0:
+		for textLine in fLines:
 
-					parsedLine = self.parseLine(line)
+			info._currentNumber+=1
 
-					if parsedLine :
-						if self.__cachedResults.has_key(parsedLine[0]) and self.isAllowToMultipleValues() :
+			textLine = textLine.strip()
 
-							values = self.__cachedResults.get(parsedLine[0])
+			if not len(textLine) == 0:
+				textLine = commentsPattern.sub("",textLine,0)
+				if not len(textLine) == 0:
+					try:
+						parsedLine = self.parseLine(textLine,info)
+						if parsedLine :
+							parsedLine = self.postProcess(parsedLine,info)
+							if parsedLine:
 
-							if isinstance(values,basestring):
-								values = [values]
+								if self.__cachedResults.has_key(parsedLine[0]) and self.isAllowToMultipleValues() :
 
-							values.append(parsedLine[1])
-							parsedLine[1] = values
+									values = self.__cachedResults.get(parsedLine[0])
 
-						self.__cachedResults.update([parsedLine])
-						
-						if self.__autoUpdateEnvironment == True:
-							env.put(parsedLine)
+									if isinstance(values,basestring):
+										values = [values]
 
-	def parseLine(self,line):
-		return line
+									values.append(parsedLine[1])
+									parsedLine[1] = values
+
+								self.__cachedResults.update([parsedLine])
+
+								if self.__autoUpdateEnvironment == True:
+									env.put(parsedLine)
+							else:
+								if LOG.isTrace():
+									LOG.trace("[%s:%d] Parser return null value !",pathToFile,info.getLineNumber())
+						else:
+							LOG.warn("[%s:%d] Parser return null value !",pathToFile,info.getLineNumber())
+
+					except Exception, e:
+						LOG.warn("[%s:%d] %s",info.getFileName(),info.getLineNumber(),e)
+
+	def parseLine(self,textLine,info):
+		return textLine
+
+	def postProcess(self,results,info):
+
+		if LOG.isTrace():
+			LOG.trace("[%s:%d] Results: %s",info.getFileName(),info.getLineNumber(),results)
+
+		return results
 
 	def results(self):
 		retVal = (self.__cachedResults.items())
@@ -92,10 +133,13 @@ class ParserManger:
 		if ParserManger.__parsers.has_key(name):
 			moduleName = ParserManger.__parsers[name]
 
-			mod = Utils.getClass(moduleName)()
+			#TODO: Maybe should cache the module object
+			mod = Utils.getClass(moduleName)
 
-			if isinstance(mod,ConfigParser):
-				parser = mod
+			instance = mod()
+			if isinstance(instance,ConfigParser):
+
+				parser = instance
 			else:
 				LOG.warn("Not recognized parser class '%s'. Object must inherited from %s",moduleName,ConfigParser)
 
@@ -111,6 +155,7 @@ class ParserManger:
 
 
 ParserManger.registerParser("bash-parser", "configuration.BashParser.BashParserImpl")
+ParserManger.registerParser("bash-path-parser", "configuration.BashParser.FilePathResolverParser")
 
 
 

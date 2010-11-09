@@ -12,26 +12,40 @@ def _strip_spaces(alist):
 	return map(lambda x: string.strip(x), alist)
 
 def _get_index(text,pattern,fromIndex=0):
-
 	#print "i:",fromIndex, " p:'",pattern,"' t:'",text,"'"
+	try:
+		return text.index(pattern,fromIndex)
 
-	if pattern:
-		try:
-			return text.index(pattern,fromIndex)
-		except ValueError:
-			pass
-
+	except ValueError:
+		pass
 	return -1
+
+def _get_index_for_first(text,patterns,fromIndex=0,defaultVal=-1):
+	#print "i:",fromIndex, " p:'",pattern,"' t:'",text,"'"
+	index = fromIndex
+	for char in text[fromIndex:]:
+		for pattern in patterns:
+			if pattern == char:
+				return index
+		index+=1
+	return defaultVal
 
 def _is_string(text):
 
 	if text:
-		if text[0] == '"' and text[len(text)-1] == '"':
+		if text[0] == '"' :
+			if text[len(text)-1] != '"':
+				raise Exception("End quot mark not found")
 			return True
-
+		else:
+			if text[len(text)-1] == '"':
+				raise Exception("Start quot mark not found")
 	return False
 
 def _normalize(text):
+
+	if text:
+		text = text.strip()
 
 	if _is_string(text) == True:
 		length = len(text)
@@ -43,39 +57,42 @@ def _replace(text,pattern,new):
 	newText = text.replace(pattern,new,1)
 
 	if LOG.isDebug(3):
-		LOG.ndebug(3," ***Replace '%s' => '%s' : '%s'",pattern,new,newText)
+		LOG.ndebug(3," ***Replace '%s' => '%s' , result: '%s'",pattern,new,newText)
 
 	return newText
 
 
 class Command(object):
-	__commandName = None
+	__commandValue = None
 
 	#__cachedIndex = None
 
-	def __init__(self,commandName):
-		self.__commandName = commandName
+	def __init__(self,commandValue):
+		self.__commandValue = commandValue
 
-	def getName(self):
-		return self.__commandName
+	def getCommandValue(self):
+		return self.__commandValue
 
 	def parse(self,value):
 		return value
 
 	def check(self,value):
-		index = _get_index(value,self.getName())
+		index = _get_index(value,self.__commandValue)
 		if index != -1:
 			#self.__cachedIndex = index
 			return True
 
 		return False
 
+	def __str__(self):
+		return str(self.__class__.__name__)
+
 class ExportCommnad(Command):
 	def __init__(self):
 		Command.__init__(self,"export")
 
 	def parse(self,value):
-		value = _replace(value,self.getName(),"")
+		value = _replace(value,self.getCommandValue(),"")
 		value=value.strip()
 		env.export(value)
 
@@ -97,7 +114,7 @@ class AltCommand(Command):
 
 	def parse(self,value):
 
-		values = value.split(self.getName())
+		values = value.split(self.getCommandValue())
 
 		if len(values) != 2:
 			#TODO: throw exception , values must contains with only two values
@@ -107,7 +124,7 @@ class AltCommand(Command):
 			value = env.getVal(values[0])
 
 			if LOG.isDebug(2):
-				LOG.ndebug(2," ***Resloved lvalue. '%s'<=>'%s'",values[0],value)
+				LOG.ndebug(2," ***Resloved value. '%s'<=>'%s'",values[0],value)
 
 			if not value:
 				value = _normalize(values[1])
@@ -122,24 +139,23 @@ class BashParserImpl(ConfigParser):
 
 	__openParam = __marker + __openBrace
 
-	__rCommands = ( AltCommand(),)
-	__lCommands = ( ExportCommnad(),)
+	__Commands = ( AltCommand(),ExportCommnad())
 
-	def parseLine(self,line):
+	def parseLine(self,textLine,info):
 
 		if LOG.isDebug(1):
-			LOG.ndebug(1,"Bash parser try parse line: '%s'",line)
+			LOG.ndebug(1,"Bash parser try parse line: '%s'",textLine)
 
 		key = None
 		val = None
 		try:
-			index = line.index('=')
+			index = textLine.index('=')
 
-			key = line[:index]
-			val = line[index+1:]
+			key = textLine[:index]
+			val = textLine[index+1:]
 
 		except ValueError:
-			key = line
+			key = textLine
 			val = None
 
 		val = _normalize(val)
@@ -151,110 +167,110 @@ class BashParserImpl(ConfigParser):
 			key = self.__parseLValue(key)
 
 		if LOG.isDebug(1):
-			LOG.ndebug(1," *Set paire Key:Value to ['%s':'%s']",key,val)
+			LOG.ndebug(1," Result ['%s':'%s']",key,val)
 		
 		return [key,val]
 
 	def __parseLValue(self,lValue):
-		#tmpValue = None
 
 		lValue = self.__parseRValue(lValue)
 
-		for actionCommand in self.__lCommands:
-			if actionCommand.check(lValue) == True:
+		actionCommand = self.getCommandForParameter(lValue)
+		if actionCommand:
+			if LOG.isDebug(2):
+				LOG.ndebug(2," **Detected '%s' command",actionCommand)
 
-				if LOG.isDebug(2):
-					LOG.ndebug(2," **Found command for '%s'.",actionCommand.getName())
+			lValue = actionCommand.parse(lValue)
 
-				lValue = actionCommand.parse(lValue)
 		return  lValue
 
-	def __parseRValue(self,value):
+	def __parseRValue(self, value):
 
 		textLength = len(value)
 		index = _get_index(value,self.__marker,0)
 
-		clonedValue = value
-
 		while index != -1 and index+1 < textLength :
+
+			if LOG.isDebug(4):
+				LOG.ndebug(4," **index:%d length:%d value:'%s'",index,textLength,value)
 
 			# For ${....}
 			if value[index+1] == self.__openBrace :
+
 				closeIndex = _get_index(value,self.__closeBrace,index+2)
 				if closeIndex == -1:
-					#TODO:throw exception : syntax error - close brace not found
-					LOG.warn("Close brace not found !!!")
-					return value
+					raise Exception("Broken line. Close brace not found => '{0}'".format(value[index:]) )
 				else:
 					parameter = value[index+2 : closeIndex]
 
 					if LOG.isDebug(2):
-						LOG.ndebug(2," **Detected parameter on %s => %s ",(index,closeIndex),parameter)
+						LOG.ndebug(2," **Detected parameter on %s => '%s' ",(index,closeIndex),parameter)
 
 					tmpValue = None
-					wasDone = False
 					#Search for special command parameter
-					for actionCommand in self.__rCommands:
-
-						if actionCommand.check(parameter) == True:
-							wasDone = True
-
-							if LOG.isDebug(2):
-								LOG.ndebug(2," **Found command '%s' in parameter.",actionCommand.getName())
-
-							tmpValue = actionCommand.parse(parameter)
-							break
-					
-					if wasDone == False:
+					actionCommand = self.getCommandForParameter(parameter)
+					if actionCommand:
+						if LOG.isDebug(2):
+							LOG.ndebug(2," **Detected '%s' command",actionCommand)
+						tmpValue = actionCommand.parse(parameter)
+					else:
 						tmpValue = env.getVal(parameter,"")
-
-					if not tmpValue:	tmpValue = ''
 
 					if LOG.isDebug(2):
 						LOG.ndebug(2," **Resolved value : '%s'",tmpValue)
 
-					clonedValue = _replace(clonedValue,value[index : closeIndex+1],tmpValue)
-					index = closeIndex # !!!
+					value = _replace(value,value[index : closeIndex+1],tmpValue)
+					index += len(tmpValue)
 
 			# For $VARIABLE
 			else:
-				index+=1
 
-				closeIndex = _get_index(value,' ',index)
-				if closeIndex != -1:
-					allegedVarLength = closeIndex - index
-				else:
-					allegedVarLength = textLength-index
-					closeIndex = index+allegedVarLength
+				closeIndex = _get_index_for_first(value,(self.__marker,' '),index+1, textLength)
 
-				variable = value[index:closeIndex]
+				parameter = value[index+1:closeIndex]
 
-				if LOG.isDebug(3):
-					LOG.ndebug(3," **i:%d ci:%d len:%d value:'%s'",index,closeIndex,allegedVarLength,variable)
+				if LOG.isDebug(2):
+						LOG.ndebug(2," **Detected parameter on %s => '%s' ",(index,closeIndex),parameter)
 
-				tmpValue = env.getVal(variable,"")
+				tmpValue = env.getVal(parameter,"")
 
 				if LOG.isDebug(2):
 					LOG.ndebug(2," **Resolved value : '%s'",tmpValue)
 
-				clonedValue = _replace(clonedValue,value[index-1 : closeIndex],tmpValue)
+				value = _replace(value,value[index : closeIndex],tmpValue)
+				index += len(tmpValue)
 
 			index = _get_index(value,self.__marker,index)
+			textLength = len(value)
 
-		return clonedValue
+		return value
 
-
-
-	def __findParameter(self,value,fromIndex=0):
-
-		oIndex = _get_index(value,self.__openParam,fromIndex)
-		if oIndex != -1:
-			cIndex = _get_index(value,self.__closeBrace,oIndex+2)
-			if cIndex == -1:
-				#TODO:throw exception : syntax error - close brace not found
-				return None
-			return oIndex,cIndex
+	def getCommandForParameter(self,parameter):
+		if parameter:
+			for actionCommand in self.__Commands:
+				if actionCommand.check(parameter) == True:
+					return actionCommand
 		return None
+
+class FilePathResolverParser(BashParserImpl):
+
+	def postProcess(self,results,info):
+
+		if LOG.isTrace():
+			LOG.trace("[%s:%d] %s",info.getFileName(),info.getLineNumber(),results)
+
+		if self.checkPath(results[0]) == False:
+			if LOG.isWarn():
+				LOG.warn("!!! NOT EXISTS [%s:%d] '%s'",info.getFileName(),info.getLineNumber(),results[0])
+			results =  None
+
+		return results
+
+	def checkPath(self,path):
+		if not os.path.exists(path):
+			return False
+		return True
+
 
 
 
