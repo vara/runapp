@@ -69,13 +69,19 @@ def resolveMavenPath():
 		_mvn += suffix
 	return _mvn
 
+def toString(data,separator=' '):
+	retVal=""
+	for s in data:
+		retVal+=s
+		retVal+=separator
+	return retVal
 
 class FSUtil(object):
 	"""Utilitie class used to operations on file sytem"""
 
 	@staticmethod
 	def resolveSymlink(path):
-		return os.path.realpath(path)
+		return os.path.abspath(path)
 
 class OSUtil(object):
 
@@ -148,15 +154,6 @@ class Timer(object):
 		if msg:
 			print msg
 		print "et:%d" % elapsed
-
-
-class BashUtil(object):
-
-	_varPrefixChar = "$"
-
-	@staticmethod
-	def findVariables(path):
-		pass
 
 
 """ test """
