@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 from types import *
+import RootDir
 
 LOG = logging.getLogger("configuration")
 
@@ -258,7 +259,11 @@ class Config(object):
 	def getScriptLocation():
 		if not Config.__scriptLocation:
 			Config.__scriptLocation = os.path.dirname(os.path.abspath(sys.argv[0]))
-		return Config.__scriptLocation 
+		return Config.__scriptLocation
+
+	@staticmethod
+	def getScriptRootPath():
+		return RootDir.determinePath()
 
 	@staticmethod
 	def getProjectDir():

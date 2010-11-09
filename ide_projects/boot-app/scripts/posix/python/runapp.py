@@ -27,7 +27,7 @@ START_TIME_MS = Timer.time()
 
 VERSION       = "1.0.0"
 
-USAGE_FP      = os.path.dirname(Config.getScriptLocation())+os.sep+"usage.txt"
+USAGE_FP      = os.path.dirname(Config.getScriptRootPath())+os.sep+"usage.txt"
 
 #RALogger.setRootDebugLevel()
 

@@ -83,7 +83,7 @@ def initialize():
 	logging.addLevelName(TRACE,"TRACE")
 	logging.getLogger().setLevel(logging.INFO)
 	logging.setLoggerClass(RALogger)
-	absPath = os.path.join(Config.getScriptLocation(),Keys.LOG_CONF_FP.fromEnv())
+	absPath = os.path.join(Config.getScriptRootPath(),Keys.LOG_CONF_FP.fromEnv())
 	
 	logging.config.fileConfig(absPath)
 
