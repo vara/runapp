@@ -27,8 +27,9 @@ class KeyEntry(object):
 		return env.getVal(self.getKey(),self.getDefaultValue())
 
 	def __str__(self):
-		return "KeyEntry["+str(self.__key)+","+str(self.__defaultVal)+"] on "+hex(id(self))
+		return self.__class__.__name__+"[ "+str(self.__key)+" , "+str(self.__defaultVal)+" ]"
 
+KeyEntryType = KeyEntry
 
 class _Env (object):
 
@@ -44,16 +45,24 @@ class _Env (object):
 	def put(kEntry,value=None):
 		if kEntry:
 
-			LOG.debug("Insert '%s':'%s' to enviroment variables",kEntry,value)
+			if LOG.isEnabledFor(logging.DEBUG):
+				LOG.debug("Insert '%s':'%s' to enviroment variables",kEntry,value)
 
 			entryType = type(kEntry)
 
-			if entryType is DictType :
-				_Env._dict.update( kEntry )
-			elif entryType is ListType or entryType is TupleType:
-				_Env._dict.update( [ kEntry ] )
-			else:
+			if entryType is StringType:
 				_Env._dict.update( [[kEntry , value]] )
+
+			elif entryType == KeyEntryType:
+				_Env._dict.update( [[kEntry.getKey(), value]] )
+
+			elif entryType is DictType :
+				_Env._dict.update( kEntry )
+
+			elif (entryType is ListType) or \
+				 			(entryType is TupleType):
+
+				_Env._dict.update( [ kEntry ] )
 
 	@staticmethod
 	def getVal(kEntry,defaultVal=None):
@@ -71,7 +80,9 @@ class _Env (object):
 
 		if not retValue: retValue = defaultVal
 
-		#LOG.debug("GetValue for Key: '%s', default: '%s' return: %s",kEntry,defaultVal,retValue)
+		if LOG.isEnabledFor(logging.DEBUG):
+			LOG.debug("GetValue for Key: '%s', default: '%s' return: '%s'",kEntry,defaultVal,retValue)
+			
 		return retValue
 
 	@staticmethod
@@ -177,13 +188,14 @@ class Keys(object):
 	@staticmethod
 	def retrieveValue(entry):
 		retValue = None
-		if isinstance(entry,str):
-			entry = Keys.getKeyFromString(entry)
 		if entry:
-			retValue = env.getVal(entry)
+			if isinstance(entry,basestring):
+				retValue = env.getVal(entry)
+			elif entry and isinstance(entry,KeyEntry):
+				retValue = entry.fromEnv()
 
 		return retValue
-		
+
 	@staticmethod
 	def iValue(entry):
 		val = Keys.retrieveValue(entry)
@@ -209,17 +221,17 @@ class Config(object):
 	_commentChar = '#'
 	_userDir = os.path.expanduser('~')
 
-	_configFName = Keys.retrieveValue(Keys.CONFIG_FName)
-	_dependencyFName = Keys.retrieveValue(Keys.DEPENDENCY_FName)
-	_jvmArgumentsFName = Keys.retrieveValue(Keys.JVM_ARGS_FName)
+	_configFName = Keys.CONFIG_FName.fromEnv()
+	_dependencyFName = Keys.DEPENDENCY_FName.fromEnv()
+	_jvmArgumentsFName =Keys.JVM_ARGS_FName.fromEnv()
 
-	_M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
+	_M2RepositoryFP = Keys.M2_REPOSITORY.fromEnv()
 
 	_provider = PROVIDERS[0]
 
-	_execTool = Keys.retrieveValue(Keys.EXEC_TOOL)
-	_mainClass = Keys.retrieveValue(Keys.MAIN_CLASS)
-	_testingMode  = Keys.retrieveValue(Keys.TESTING_MODE)
+	_execTool = Keys.EXEC_TOOL.fromEnv()
+	_mainClass = Keys.MAIN_CLASS.fromEnv()
+	_testingMode  = Keys.TESTING_MODE.fromEnv()
 
 	_javaBinPath = None
 
@@ -228,22 +240,17 @@ class Config(object):
 	@staticmethod
 	def update():
 
-		#Config._configFP = Keys.retrieveValue(Keys.CONFIG_FP)
-		Config._dependencyFName = Keys.retrieveValue(Keys.DEPENDENCY_FName)
-		Config._jvmArgumentsFName = Keys.retrieveValue(Keys.JVM_ARGS_FName)
+		#_configFName = Keys.CONFIG_FName.fromEnv()
+		_dependencyFName = Keys.DEPENDENCY_FName.fromEnv()
+		_jvmArgumentsFName =Keys.JVM_ARGS_FName.fromEnv()
 
-		Config._M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
-		LOG.info("!!!!!!! %s",Config._M2RepositoryFP)
+		Config._M2RepositoryFP = Keys.M2_REPOSITORY.fromEnv()
 		if not Config._M2RepositoryFP:
 			env.put(Keys.M2_REPOSITORY,Config.getM2Repository())
-			Config._M2RepositoryFP = Keys.retrieveValue(Keys.M2_REPOSITORY)
-			LOG.info("!!!!!!! %s",Config._M2RepositoryFP)
 
-		Config._execTool = Keys.retrieveValue(Keys.EXEC_TOOL)
-		Config._mainClass = Keys.retrieveValue(Keys.MAIN_CLASS)
-		Config._testingMode  = Keys.retrieveValue(Keys.TESTING_MODE)
-
-
+		_execTool = Keys.EXEC_TOOL.fromEnv()
+		_mainClass = Keys.MAIN_CLASS.fromEnv()
+		_testingMode  = Keys.TESTING_MODE.fromEnv()
 
 	@staticmethod
 	def getProjectDir():
