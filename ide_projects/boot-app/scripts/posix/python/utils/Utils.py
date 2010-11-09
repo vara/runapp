@@ -35,18 +35,25 @@ def resolveJavaPath() :
 			try:
 				from _winreg import ConnectRegistry,OpenKey,QueryValueEx,CloseKey, HKEY_LOCAL_MACHINE
 
-				LOG.debug("Try to resolve java path from windows registry")
+				if LOG.isDebug():
+					LOG.debug("Try to resolve java path from windows registry")
+
 				aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
 				aKey1 = OpenKey(aReg, r"SOFTWARE\JavaSoft\Java Runtime Environment")
 				JRTVersion = QueryValueEx(aKey1,"CurrentVersion")
 				if JRTVersion:
-					LOG.debug("JRE ver. %s",JRTVersion[0])
+
+					if LOG.isDebug(1):
+						LOG.ndebug(1,"JRE ver. %s",JRTVersion[0])
+
 					aKey2 = OpenKey(aKey1, JRTVersion[0])
 					regVal = QueryValueEx(aKey2,"JavaHome")
 					CloseKey(aKey2)
 					if regVal :
 						_javaBin = regVal[0]
-				LOG.debug("Resolved java path is %s",_javaBin)
+
+				if LOG.isDebug():
+					LOG.debug("Resolved java path is %s",_javaBin)
 
 				CloseKey(aKey1)
 				CloseKey(aReg)
@@ -54,7 +61,7 @@ def resolveJavaPath() :
 			except ImportError:
 				LOG.warn("Module _winreg not found, module needed for resolving Java installation path!")
 
-	if _javaBin !=  None:
+	if _javaBin:
 		suffix = os.sep+"bin"+os.sep+"java"
 		if not _javaBin.endswith(suffix):
 			_javaBin += suffix
