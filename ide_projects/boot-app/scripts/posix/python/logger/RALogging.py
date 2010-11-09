@@ -84,6 +84,7 @@ def initialize():
 	logging.getLogger().setLevel(logging.INFO)
 	logging.setLoggerClass(RALogger)
 	absPath = os.path.join(Config.getScriptLocation(),Keys.LOG_CONF_FP.fromEnv())
+	
 	logging.config.fileConfig(absPath)
 
 	#User can quickly override level from console
