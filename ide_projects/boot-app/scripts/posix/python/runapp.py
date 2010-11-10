@@ -122,13 +122,6 @@ def initConfigurationFile(argPath):
 
 	return retVal
 
-def checkPaths(list,autoRemove=True):
-	for k,v in list:
-		if not os.path.exists(k):
-			LOG.warn("!!! NOT EXIST '%s'",k)
-			list.remove((k,v))
-
-	return list
 
 def parseArguments(arguments):
 
@@ -143,7 +136,7 @@ def parseArguments(arguments):
 		for o,a in opts:
 
 			if LOG.isDebug(2):
-				LOG.ndebug(2,"Parsing option %s <=> %s",o,a)
+				LOG.ndebug(2,"Parsing option '%s' <=> '%s'",o,a)
 
 			if o in ("-h", "--help"):
 				printUsage()
@@ -180,8 +173,6 @@ def parseArguments(arguments):
 		printUsage()
 		exitScript(2)
 
-PROCESS = None
-
 def trapHandler(signal,stackFrame):
 	if LOG.isDebug():
 		LOG.debug("sig:%d",signal)
@@ -206,6 +197,8 @@ def main(rawArgs):
 
 	readConfig(Config.getConfigFName())
 
+	# After loaded configuration, some environments may have changed
+	# synchronize configuration with env.
 	Config.update()
 
 	args = parseArguments(rawArgs)
