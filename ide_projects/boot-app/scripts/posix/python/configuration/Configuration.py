@@ -17,6 +17,7 @@ class KeyEntry(object):
 	def __init__(self,key,defaultValue=None):
 		self.__key = key
 		self.__defaultVal = defaultValue
+		#print self
 
 	def getKey(self):
 		return self.__key
@@ -25,7 +26,7 @@ class KeyEntry(object):
 		return self.__defaultVal
 
 	def fromEnv(self):
-		return env.getVal(self.getKey(),self.getDefaultValue())
+		return _Env.getVal(self.getKey(),self.getDefaultValue())
 
 	def __str__(self):
 		return self.__class__.__name__+"[ "+str(self.__key)+" , "+str(self.__defaultVal)+" ]"
@@ -72,16 +73,23 @@ class _Env (object):
 
 		retValue = None
 		if kEntry:
-			if isinstance(kEntry,KeyEntry):
+
+			entryType = type(kEntry)
+
+			if entryType == KeyEntryType:
+				# If defaultValue has not been set explicitly
+				# then use value from KeyEntry object
 				if not defaultVal:
 					defaultVal = kEntry.getDefaultValue()
 				kEntry = kEntry.getKey()
 
 			retValue = _Env._dict.get(kEntry)
+
 			if not retValue:
 				retValue = os.getenv(kEntry)
 
-		if not retValue: retValue = defaultVal
+		if not retValue:
+			retValue = defaultVal
 
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("GetValue for Key: '%s', default: '%s' return: '%s'",kEntry,defaultVal,retValue)
@@ -131,7 +139,7 @@ class _Env (object):
 		return dict(list)
 
 
-env = _Env()
+#env = _Env()
 
 # Definition of global variables
 #
@@ -161,7 +169,10 @@ class Keys(object):
 	DEPENDENCY_FName = KeyEntry("DEPENDENCY_FP","runapp.dep")
 	JVM_ARGS_FName = KeyEntry("JVM_ARGS_FP","runapp.jvmargs")
 	EXEC_TOOL = KeyEntry("EXEC_TOOL","")
-	M2_REPOSITORY = KeyEntry("M2_REPOSITORY")
+
+	M2_REPOSITORY = KeyEntry("M2_REPOSITORY",
+							 os.path.expanduser('~')+os.sep+".m2"+os.sep+"repository")
+
 	MAIN_CLASS =  KeyEntry("MAINCLASS")
 	TESTING_MODE = KeyEntry("TESTING_MODE")
 	WAIT_ON_EXIT = KeyEntry("WAIT_ON_EXIT","1")
@@ -192,9 +203,16 @@ class Keys(object):
 	def retrieveValue(entry):
 		retValue = None
 		if entry:
-			if isinstance(entry,basestring):
-				retValue = env.getVal(entry)
-			elif entry and isinstance(entry,KeyEntry):
+			typeOf = type(entry)
+
+			if typeOf == StringType:
+				tmp = Keys.getKeyFromString(entry)
+				if not tmp:
+					retValue = _Env.getVal(entry)
+				else:
+					retValue = tmp.fromEnv()
+
+			elif typeOf == KeyEntryType:
 				retValue = entry.fromEnv()
 
 		return retValue
@@ -280,7 +298,7 @@ class Config(object):
 
 		Config._prjDir = path
 
-		env.put(Keys.PRJ_DIR,path)
+		_Env.put(Keys.PRJ_DIR,path)
 		
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Project dir has been set to '%s'.",path)
@@ -328,7 +346,7 @@ class Config(object):
 	@staticmethod
 	def setExecTool(tool):
 		Config._execTool = tool
-		env.put(Keys.EXEC_TOOL,tool)
+		_Env.put(Keys.EXEC_TOOL,tool)
 
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Set exec tool '%s'.",tool)
@@ -398,6 +416,27 @@ class Config(object):
 	def getCommentChar():
 		return Config._commentChar
 
+class env:
+	""" Encapsulate data ..."""
+
+	@staticmethod
+	def putEnv(key,value=None):
+
+		_Env.put(key,value)
+
+	@staticmethod
+	def getEnv(kEntry,defaultVal=None):
+		retVal = None
+		if not defaultVal:
+			retVal = Keys.retrieveValue(kEntry)
+		else:
+			retVal = _Env.getVal(kEntry,defaultVal)
+
+		return retVal
+
+	@staticmethod
+	def export(key,val=None):
+		_Env.export(key,val)
 
 	""" test """
 

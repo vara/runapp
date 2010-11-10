@@ -3,7 +3,7 @@
 import os,string
 from logger import RALogging
 from Parser import ConfigParser
-from configuration.Configuration import env,Config
+from configuration.Configuration import Config,env
 
 LOG = RALogging.getLogger("parser-bash")
 
@@ -121,7 +121,7 @@ class AltCommand(Command):
 			LOG.error("Syntax error: parameter must have two values seperated by ':-' ")
 			pass
 		else:
-			value = env.getVal(values[0])
+			value = ConfigParser.findVariable(values[0])
 
 			if LOG.isDebug(2):
 				LOG.ndebug(2," ***Resloved value. '%s'<=>'%s'",values[0],value)
@@ -214,7 +214,7 @@ class BashParserImpl(ConfigParser):
 							LOG.ndebug(2," **Detected '%s' command",actionCommand)
 						tmpValue = actionCommand.parse(parameter)
 					else:
-						tmpValue = env.getVal(parameter,"")
+						tmpValue = self.findVariable(parameter,"")
 
 					if LOG.isDebug(2):
 						LOG.ndebug(2," **Resolved value : '%s'",tmpValue)
@@ -232,7 +232,7 @@ class BashParserImpl(ConfigParser):
 				if LOG.isDebug(2):
 						LOG.ndebug(2," **Detected parameter on %s => '%s' ",(index,closeIndex),parameter)
 
-				tmpValue = env.getVal(parameter,"")
+				tmpValue = self.findVariable(parameter,"")
 
 				if LOG.isDebug(2):
 					LOG.ndebug(2," **Resolved value : '%s'",tmpValue)

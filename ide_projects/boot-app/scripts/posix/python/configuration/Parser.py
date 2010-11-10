@@ -81,7 +81,7 @@ class ConfigParser:
 								self.__cachedResults.update([parsedLine])
 
 								if self.__autoUpdateEnvironment == True:
-									env.put(parsedLine)
+									env.putEnv(parsedLine)
 							else:
 								if LOG.isTrace():
 									LOG.trace("[%s:%d] Parser return null value !",pathToFile,info.getLineNumber())
@@ -123,6 +123,13 @@ class ConfigParser:
 
 	def isAllowToMultipleValues(self):
 		return self.__allowToMultipleValues
+
+	@staticmethod
+	def findVariable(val,defVal=None):
+		retVal = env.getEnv(val)
+		if not retVal:
+			retVal = defVal
+		return retVal
 
 class ParserManger:
 	__parsers = dict()
