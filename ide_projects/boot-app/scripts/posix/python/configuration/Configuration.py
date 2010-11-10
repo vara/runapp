@@ -46,24 +46,26 @@ class _Env (object):
 	def put(kEntry,value=None):
 		if kEntry:
 
-			if LOG.isEnabledFor(logging.DEBUG):
-				LOG.debug("Insert '%s' to enviroment variables",kEntry)
-
 			entryType = type(kEntry)
 
 			if entryType is StringType:
-				_Env._dict.update( [[kEntry , value]] )
+				newValue = [[kEntry , value]]
 
 			elif entryType == KeyEntryType:
-				_Env._dict.update( [[kEntry.getKey(), value]] )
+				newValue = [[kEntry.getKey(), value]]
 
 			elif entryType is DictType :
-				_Env._dict.update( kEntry )
+				newValue = kEntry
 
 			elif (entryType is ListType) or \
 				 			(entryType is TupleType):
 
-				_Env._dict.update( [ kEntry ] )
+				newValue = [ kEntry ]
+
+			_Env._dict.update( newValue )
+
+			if LOG.isEnabledFor(logging.DEBUG-2):
+				LOG.debug("Inserted '%s' to enviroment variables",newValue)
 
 	@staticmethod
 	def getVal(kEntry,defaultVal=None):
@@ -236,7 +238,7 @@ class Config(object):
 
 	_javaBinPath = None
 
-	_prjDir = os.getcwd()
+	_prjDir = None
 
 	__scriptLocation = None
 
@@ -281,7 +283,7 @@ class Config(object):
 		env.put(Keys.PRJ_DIR,path)
 		
 		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Project dir '%s' has been changed.",path)
+			LOG.debug("Project dir has been set to '%s'.",path)
 
 	@staticmethod
 	def getConfigFName():
