@@ -156,7 +156,7 @@ def initializeCMDLOptions(opts):
 			Config.setExecTool(a)
 
 		elif o in ("-d","--debug"):
-			RALogger.setRootDebugLevel(a)
+			RALogger.setRootLogLevel(a)
 
 		elif o in ("-s","--showKeys"):
 			Keys.printAllKeys()
@@ -190,6 +190,9 @@ def resolveNonOptionFromList(val):
 	separator = "--"
 	for arg in val:
 
+		arg = arg.strip() #remove white space at the ends
+		if len(arg) == 0: continue
+		
 		if arg == separator: #Can override in next round
 			if LOG.isDebug(4):
 				LOG.ndebug(4,"Encountered to mark the end of arguments on %d index.",index)
