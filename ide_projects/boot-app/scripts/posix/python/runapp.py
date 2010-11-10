@@ -113,8 +113,8 @@ def initConfigurationFile(argPath):
 def parseArguments(arguments):
 
 	try:
-		opts, args = getopt.getopt(arguments, "hp:ve:d:", \
-				["help","version","testingMode","provider=","exec=","debug=","mainClass","testingMode"])
+		opts, args = getopt.getopt(arguments, "hp:ve:d:s", \
+				["help","version","testingMode","provider=","exec=","debug=","mainClass","testingMode","showKeys"])
 
 		if LOG.isTrace():
 			LOG.trace('OPTIONS   : %s', opts)
@@ -157,6 +157,10 @@ def initializeCMDLOptions(opts):
 
 		elif o in ("-d","--debug"):
 			RALogger.setRootDebugLevel(a)
+
+		elif o in ("-s","--showKeys"):
+			Keys.printAllKeys()
+			exitScript(0)
 
 		else:
 			LOG.warn("Not found or path {%s}" , o)
