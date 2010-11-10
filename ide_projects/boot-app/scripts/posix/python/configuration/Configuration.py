@@ -163,7 +163,7 @@ class Keys(object):
 	MAIN_CLASS =  KeyEntry("MAINCLASS")
 	TESTING_MODE = KeyEntry("TESTING_MODE")
 	WAIT_ON_EXIT = KeyEntry("WAIT_ON_EXIT","1")
-	PRJ_DIR = KeyEntry("PROJECT_DIR",os.getcwd())
+	PRJ_DIR = KeyEntry("PROJECT_DIR")
 
 	USER_ARGS_TO_APP = KeyEntry("USER_ARGS_TO_APP",'')
 
@@ -255,6 +255,10 @@ class Config(object):
 		_mainClass = Keys.MAIN_CLASS.fromEnv()
 		_testingMode  = Keys.TESTING_MODE.fromEnv()
 
+		if not Keys.PRJ_DIR.fromEnv():
+			Config.setProjectDir(os.getcwd())
+
+
 	@staticmethod
 	def getScriptLocation():
 		if not Config.__scriptLocation:
@@ -271,6 +275,7 @@ class Config(object):
 
 	@staticmethod
 	def setProjectDir(path):
+
 		Config._prjDir = path
 
 		env.put(Keys.PRJ_DIR,path)

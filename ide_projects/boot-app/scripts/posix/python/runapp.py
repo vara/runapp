@@ -118,7 +118,6 @@ def initConfigurationFile(argPath):
 	if os.path.isdir(argPath):
 		if os.getcwd() != argPath:
 			os.chdir(argPath)
-			Config.setProjectDir(os.getcwd())
 		retVal = True
 
 	return retVal
@@ -198,6 +197,8 @@ def main(rawArgs):
 	if len(rawArgs)>0:
 		if initConfigurationFile(rawArgs[0]):
 			rawArgs = rawArgs[1:]
+
+	Config.setProjectDir(os.getcwd())
 
 	# Read config should be before cmdl parsing
 	# Allow us to overriding parameters defined in config file
