@@ -20,7 +20,7 @@ RALogging.initialize()
 
 from utils import Utils
 from utils.Utils import OSUtil, FSUtil, Timer
-from configuration.Configuration import Config,Keys, env
+from configuration.Configuration import Config,Keys
 from configuration.Parser import ParserManger
 
 START_TIME_MS = Timer.time()
