@@ -5,16 +5,9 @@
 # Since: 2010-11-05 22:20:20 CET
 #
 
-import os
-import sys
-import commands
-import time
-import getopt
-import optparse
+import os, sys, commands, time, getopt, optparse, string, signal, subprocess
 from logger import RALogging
 from logger.RALogging import RALogger
-import subprocess
-import signal
 
 RALogging.initialize()
 
@@ -61,7 +54,7 @@ def readConfig2(path,parserName="bash-parser"):
 		LOG.warn("Config file '%s' not exist",path)
 
 def readConfig(path,parserName="bash-parser"):
-
+	path = FSUtil.resolveSymlink(path)
 	if os.path.exists(path) :
 
 		parser = ParserManger.getParserByName(parserName)
@@ -119,6 +112,10 @@ def initConfigurationFile(argPath):
 		if os.getcwd() != argPath:
 			os.chdir(argPath)
 			Config.setProjectDir(os.getcwd())
+
+			if LOG.isDebug(1):
+				LOG.ndebug(1,"Application ROOT directory changed to '%s'",os.getcwd())
+
 		retVal = True
 
 	return retVal
@@ -229,7 +226,8 @@ def main(rawArgs):
 
 	if provider == "java":
 
-		execPath = Config.getJavaBinPath()
+		#Fix: When path contains white space. C:\\Program Files\... 
+		execPath = "\"" + Config.getJavaBinPath() + "\""
 		execArgs = jvmArgs
 
 		if len(dependency) > 1:
