@@ -82,16 +82,15 @@ class RALogger(logging.Logger):
 		return TRACE >= self.getEffectiveLevel()
 
 	@staticmethod
-	def setRootDebugLevel(level=0):
-
-		try:
-			level =  RALogger.__fixLevel(logging.DEBUG,level)
+	def setRootLogLevel(level=logging.INFO):
+		try :
+			level = int(level)
+			if level < 0 :
+				level = 0
 			logging.getLogger().setLevel(level)
-
-			getLogger().info("Set %s on ROOT logger.",logging._levelNames[level])
-
-		except:
-			logging.warn("You try set wrong level ! [%s]",level)
+			logging.getLogger().info("Set level to %d on ROOT logger.",level)
+		except ValueError, e:
+			logging.getLogger().warn("Wrong value for logger level !\n => %s ",e)
 
 	@staticmethod
 	def __fixLevel(origLevel,diff=0):
