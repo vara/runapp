@@ -4,8 +4,6 @@ import os
 import sys
 import logging
 import logging.config
-import configuration.Configuration
-from configuration.Configuration import Keys,Config
 
 TRACE = 5
 DEBUG5 = 6
@@ -14,6 +12,33 @@ DEBUG3 = 8
 DEBUG2 = 9
 DEBUG = logging.DEBUG
 
+def getLogger(name=None):
+	return logging.getLogger(name)
+
+def initialize():
+
+	import configuration.Configuration
+	from configuration.Configuration import Keys,Config
+
+	for i in range(1,5) :
+		logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i))
+
+	logging.addLevelName(TRACE,"TRACE")
+	logging.getLogger().setLevel(logging.INFO)
+	logging.setLoggerClass(RALogger)
+	absPath = os.path.join(Config.getScriptRootPath(),Keys.LOG_CONF_FP.fromEnv())
+
+	if os.path.exists(absPath):
+		logging.config.fileConfig(absPath)
+	else:
+		logging.basicConfig(level=logging.INFO)
+		getLogger().warn("Path \n\t => '%s'\n not found !"
+					"... Logger has been configured basing on defult implementation.",absPath)
+
+	#User can quickly override level from console
+	debugLev = os.getenv("DEBUG")
+	if debugLev:
+		getLogger().setLevel(int(debugLev))
 
 class RALogger(logging.Logger):
 
@@ -74,32 +99,6 @@ class RALogger(logging.Logger):
 		if origLevel == logging.DEBUG:
 			level = logging.DEBUG - min((4,diff))
 		return level
-
-def initialize():
-
-	for i in range(1,5) :
-		logging.addLevelName(logging.DEBUG-i,"DEBUG"+str(i))
-
-	logging.addLevelName(TRACE,"TRACE")
-	logging.getLogger().setLevel(logging.INFO)
-	logging.setLoggerClass(RALogger)
-	absPath = os.path.join(Config.getScriptRootPath(),Keys.LOG_CONF_FP.fromEnv())
-
-	if os.path.exists(absPath):
-		logging.config.fileConfig(absPath)
-	else:
-		logging.basicConfig(level=logging.INFO)
-		getLogger().warn("Path \n\t => '%s'\n not found !"
-					"... Logger has been configured basing on defult implementation.",absPath)
-
-	#User can quickly override level from console
-	debugLev = os.getenv("DEBUG")
-	if debugLev:
-		getLogger().setLevel(int(debugLev))
-
-
-def getLogger(name=None):
-	return logging.getLogger(name)
 
 if __name__ == "__main__":
 
