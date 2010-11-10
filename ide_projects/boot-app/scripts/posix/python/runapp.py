@@ -77,14 +77,14 @@ def readConfig(path,parserName="bash-parser"):
 
 
 def __toCommandLineString(list,separator=':'):
-
 	cmdLine = ""
 
-	for (k,v) in list:
-		cmdLine += k
-		if v:
-			cmdLine+="="+v
-		cmdLine+=separator
+	if list:
+		for (k,v) in list:
+			cmdLine += k
+			if v:
+				cmdLine+="="+v
+			cmdLine+=separator
 
 	return cmdLine
 #
@@ -102,7 +102,6 @@ def printUsage():
 
 def initConfigurationFile(argPath):
 
-	retVal = None
 	argPath = FSUtil.resolveSymlink(os.path.expanduser(argPath))
 
 	if LOG.isDebug(1):
@@ -113,14 +112,10 @@ def initConfigurationFile(argPath):
 		Config.setConfigFName(os.path.basename(argPath))
 
 		argPath = os.path.dirname(argPath)
-		retVal = True
 
 	if os.path.isdir(argPath):
 		if os.getcwd() != argPath:
 			os.chdir(argPath)
-		retVal = True
-
-	return retVal
 
 
 def parseArguments(arguments):
@@ -129,53 +124,110 @@ def parseArguments(arguments):
 		opts, args = getopt.getopt(arguments, "hp:ve:d:", \
 				["help","version","testingMode","provider=","exec=","debug=","mainClass","testingMode"])
 
-		if LOG.isTrace:
+		if LOG.isTrace():
 			LOG.trace('OPTIONS   : %s', opts)
 			LOG.trace('ARGS      : %s', args)
 
-		for o,a in opts:
-
-			if LOG.isDebug(2):
-				LOG.ndebug(2,"Parsing option '%s' <=> '%s'",o,a)
-
-			if o in ("-h", "--help"):
-				printUsage()
-				exitScript()
-
-			elif o in ("-v", "--version"):
-				print "v",VERSION
-				exitScript()
-
-			elif o in ("-p", "--provider"):
-				Config.setProvider(a)
-
-			elif o in ("--mainClass",):
-				Config.setMainClass(a)
-
-			elif o in ("--testingMode",):
-				Config.setTestingMode(True)
-
-			elif o in ("-e", "--exec"):
-
-				Config.setExecTool(a)
-
-			elif o in ("-d","--debug"):
-				RALogger.setRootDebugLevel(a)
-
-			else:
-				LOG.warn("Not found or path {%s}" , o)
-
-
-		return args
+		return opts , args
 
 	except getopt.GetoptError, e :
 		LOG.warn("Cmdl options %s",e)
 		printUsage()
 		exitScript(2)
 
+def initializeCMDLOptions(opts):
+
+	for o,a in opts:
+
+		if LOG.isDebug(2):
+			LOG.ndebug(2,"Parsing option '%s' <=> '%s'",o,a)
+
+		if o in ("-h", "--help"):
+			printUsage()
+			exitScript()
+
+		elif o in ("-v", "--version"):
+			print "v",VERSION
+			exitScript()
+
+		elif o in ("-p", "--provider"):
+			Config.setProvider(a)
+
+		elif o in ("--mainClass",):
+			Config.setMainClass(a)
+
+		elif o in ("--testingMode",):
+			Config.setTestingMode(True)
+
+		elif o in ("-e", "--exec"):
+
+			Config.setExecTool(a)
+
+		elif o in ("-d","--debug"):
+			RALogger.setRootDebugLevel(a)
+
+		else:
+			LOG.warn("Not found or path {%s}" , o)
+
 def trapHandler(signal,stackFrame):
 	if LOG.isDebug():
 		LOG.debug("sig:%d",signal)
+
+def __isOption(val):
+	""" Test if current argumnet is commnad line option
+	"""
+	test = False
+	if val:
+		test = val[0] == '-'
+
+	return test
+
+def resolveNonOptionFromList(val):
+
+	""" Find first non-option value and return them with his index number.
+	 	If value has not been found then the function will return null, other wise will
+	 	return tuple containing two elements sequentially : (non-option , index).
+	"""
+	index = 0
+	objNonOptionEnt = None
+	objEndMarkEnt = None
+	separator = "--"
+	for arg in val:
+
+		if arg == separator: #Can override in next round
+			if LOG.isDebug(4):
+				LOG.ndebug(4,"Encountered to mark the end of arguments on %d index.",index)
+			objEndMarkEnt = index
+
+			if objNonOptionEnt: # If we have extracted non-option then we have nothing to do
+				break
+
+		if not objNonOptionEnt: # blocked opportunity override
+			if __isOption(arg) == False:
+				objNonOptionEnt = (arg,index)
+				if LOG.isDebug(4):
+					LOG.ndebug(4,"Found non-option value => %s",objNonOptionEnt)
+
+		index +=1
+
+	#If found, see whether value should be replaced by separator
+	if objNonOptionEnt:
+
+		if not objEndMarkEnt and \
+				objNonOptionEnt[1]>0 and \
+						objNonOptionEnt[1]<len(val)-1:
+
+			val[objNonOptionEnt[1]] = separator
+			if LOG.isDebug(4):
+				LOG.ndebug(4,"Replaced non-option value with '%s'",separator)
+		else:
+			val.pop(objNonOptionEnt[1])
+			if LOG.isDebug(4):
+				LOG.ndebug(4,"Only removed non-option value")
+
+
+	return objNonOptionEnt
+
 
 #######################################
 #                                     #
@@ -183,13 +235,40 @@ def trapHandler(signal,stackFrame):
 #                                     #
 #######################################
 
-def main(rawArgs):
+def main(rawArguments):
 
-	if len(rawArgs)>0:
-		if initConfigurationFile(rawArgs[0]):
-			rawArgs = rawArgs[1:]
+	# Project/root directory can be set on a different ways.
+	# On the first place from command line arguments.
+	#
+	# Search directory in array of arguments.
+	# Examined cases:
+	#	1. runapp ~/dir -opts -- -appOpts  => ['-opts', '--', '-appOpts']
+	#   2. runapp -opts ~/dir -- -appOpts  => ['-opts', '--', '-appOpts'] 
+	#   3. runapp -opts -- ~/dir -appOpts  => ['-opts', '--', '-appOpts']
+	#   4. runapp -opts -- -appOpts ~/dir  => ['-opts', '--', '-appOpts']
+	#   5. runapp -opts ~/dir
+	#	6. runapp  ... ( without dir )
+	#	7. runapp -opts ~/dir -appOpts     => ['-opts', '--', '-appOpts']
+	#
+	#   Try find first encountered non-option value and split them.
+	#		Then will be wrong in case 7 (-appOpts will be joined to -opts )
+	#		sol: Replace found value with end mark char(separator) only then if end mark will not found.
+	#			bug: runapp ~/dir -opts => runapp -- -opts !!!
+	#		And its index is greater then zero.
+	#			e.q  runapp -opts ~/dir ...
+	#
+	# to case 1. Default parser recognize it as a the arguments for the external application (all to appArguments)
+	#		conclusion is that non-option value will be treated as end mark
+	#
 
+	val = resolveNonOptionFromList(rawArguments)
+
+	if val:
+		initConfigurationFile(val[0])
+	
 	Config.setProjectDir(os.getcwd())
+
+	appOptions, appArguments = parseArguments(rawArguments)
 
 	# Read config should be before cmdl parsing
 	# Allow us to overriding parameters defined in config file
@@ -201,9 +280,9 @@ def main(rawArgs):
 	# synchronize configuration with env.
 	Config.update()
 
-	args = parseArguments(rawArgs)
+	initializeCMDLOptions(appOptions)
 
-	argumentsToApp = Keys.USER_ARGS_TO_APP.fromEnv()+' '+Utils.toString(args)
+	appArguments = Keys.USER_ARGS_TO_APP.fromEnv()+' '+Utils.toString(appArguments)
 
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
@@ -229,7 +308,7 @@ def main(rawArgs):
 		if len(dependency) > 1:
 			execArgs += " -cp "+dependency
 
-		execArgs += " "+Config.getMainClass()+" "+argumentsToApp
+		execArgs += " "+Config.getMainClass()+" "+appArguments
 
 	elif provider == "maven":
 		LOG.warn("Maven provider not implenebted yet !")
@@ -244,11 +323,12 @@ def main(rawArgs):
 		LOG.debug("Exec path: '%s'",execPath)
 		LOG.debug("JVM Parameters: '%s'",jvmArgs)
 		LOG.debug("Main class: '%s'",Config.getMainClass())
-		LOG.debug("User args: '%s'",argumentsToApp)
+		LOG.debug("User args: '%s'",appArguments)
 
 	LOG.info("Elapsed time of preparing of boot application %dms",Timer.time(START_TIME_MS))
 
 	if not Config.isTestingMode():
+
 		workingTime = Timer.time()
 		cmd = Utils.toString( (Config.getExecTool(),execPath,execArgs))
 		process = subprocess.Popen(cmd, shell=True)
@@ -262,7 +342,8 @@ def main(rawArgs):
 
 		LOG.info("Application working time: %d",Timer.time(workingTime))
 
-		LOG.debug("The application has finished work ! [exitcode:%d]",process.returncode)
+		if LOG.isDebug():
+			LOG.debug("The application has finished work ! [exitcode:%d]",process.returncode)
 
 
 if __name__ == "__main__":
