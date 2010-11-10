@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import sys, os, unittest
+import UtilsForTests
 
 if __name__ == "__main__":
-	sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))) )
+	sys.path.append( UtilsForTests.getAbsDirName(__file__,1))
 
 import runapp
 
