@@ -54,7 +54,8 @@ class RALogger(logging.Logger):
 
 	def debug(self,msg, *args, **kwargs):
 		#print "  !!! :",args
-		logging.Logger.debug(self,msg, *args,**kwargs)
+		if self.isEnabledFor(DEBUG):
+			self._log(DEBUG, msg, args, **kwargs)
 
 	def ndebug(self,level,msg, *args, **kwargs):
 
