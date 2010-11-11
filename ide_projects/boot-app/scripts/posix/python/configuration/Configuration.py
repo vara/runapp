@@ -66,7 +66,7 @@ class _Env (object):
 			_Env._dict.update( newValue )
 
 			if LOG.isEnabledFor(logging.DEBUG-2):
-				LOG.debug("Inserted '%s' to enviroment variables",newValue)
+				LOG.debug("Inserted '%s' to enviroments variables",newValue)
 
 	@staticmethod
 	def getVal(kEntry,defaultVal=None):
