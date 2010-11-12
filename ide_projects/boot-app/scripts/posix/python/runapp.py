@@ -327,6 +327,8 @@ def main(rawArguments):
 		LOG.error("Unrecongnized provider %s !",provider)
 		exitScript(2)
 
+	globalVariables = env.getExportedVars()
+
 	if LOG.isDebug():
 
 		LOG.debug("Exec tool: '%s'",Config.getExecTool())
@@ -341,7 +343,8 @@ def main(rawArguments):
 
 		workingTime = Timer.time()
 		cmd = Utils.toString( (Config.getExecTool(),execPath,execArgs))
-		process = subprocess.Popen(cmd, shell=True)
+
+		process = subprocess.Popen(cmd, shell=True,env=globalVariables)
 
 		if LOG.isDebug():
 			LOG.debug("Created new process with PID:%d.",process.pid)
