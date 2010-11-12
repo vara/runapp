@@ -3,7 +3,7 @@
 import os
 import re
 
-from configuration.Configuration import env,Config
+from configuration.Configuration import env
 from utils import Utils
 from logger import RALogging
 
@@ -50,8 +50,7 @@ class ConfigParser:
 
 		info = ConfigParserInfo(pathToFile)
 
-		cch = Config.getCommentChar()
-		commentsPattern = re.compile(cch+'.*$')
+		commentsPattern = re.compile('#.*$')
 
 		for textLine in fLines:
 
