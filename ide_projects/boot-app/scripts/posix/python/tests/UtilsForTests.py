@@ -30,6 +30,18 @@ def getAbsDirName(path,topLevels=0):
 
 	return path
 
+os.sys.path.append( getAbsDirName(__file__,1))
+
+import configuration.Configuration
+
+def insertVar(key,value):
+		"""
+		This is a forcing for inserting variable directly
+		to local environment variables container.
+		Operands should be validated before calling this method.
+		"""
+		configuration.Configuration._Env.put([[key,value]])
+
 if __name__ == "__main__":
 	for i in range(0,3):
 		print i, ":", getAbsDirName(__file__,i)
