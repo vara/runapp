@@ -13,13 +13,12 @@ RALogging.initialize()
 
 from utils import Utils
 from utils.Utils import OSUtil, FSUtil, Timer
-from configuration.Configuration import Config,Keys
+from configuration.Configuration import Config,Keys,env
 from configuration.Parser import ParserManger
 
 START_TIME_MS = Timer.time()
 
 VERSION       = "1.0.0"
-
 USAGE_FP      = os.path.dirname(Config.getScriptRootPath())+os.sep+"usage.txt"
 
 #RALogger.setRootDebugLevel()
@@ -28,7 +27,8 @@ LOG = RALogging.getLogger("runapp")
 #LOG.setLevel(RALogging.DEBUG)
 
 def exitScript(exitCode=0):
-	wait = Keys.iValue(Keys.WAIT_ON_EXIT)
+	wait = env.getEnvInt(Keys.WAIT_ON_EXIT)
+
 	if wait and wait>0:
 
 		if LOG.isDebug(2):
@@ -94,8 +94,15 @@ def printUsage():
 	print "%s" % content
 
 def initConfigurationFile(argPath):
+	""" Initialize project root directory from argPath.
+		If path will be file then will be assignet to the project configuration file 
+		If path not exists then will raise exception
 
+	"""
 	argPath = FSUtil.resolveSymlink(os.path.expanduser(argPath))
+
+	if not os.path.exists(argPath):
+		raise Exception("Detected attempt to set directory from not existing path '%s'" % argPath)
 
 	if LOG.isDebug(1):
 		LOG.ndebug(1,"Initialize ROOT directory from path '%s'",argPath)
@@ -107,8 +114,8 @@ def initConfigurationFile(argPath):
 		argPath = os.path.dirname(argPath)
 
 	if os.path.isdir(argPath):
-		if os.getcwd() != argPath:
-			os.chdir(argPath)
+		#os.chdir(argPath)
+		Config.setProjectDir(argPath)
 
 def parseArguments(arguments):
 
@@ -262,10 +269,13 @@ def main(rawArguments):
 
 	val = resolveNonOptionFromList(rawArguments)
 
+	# If path has been found in command line arguments then initialize it.
+	# If true then overwrite current system env var
 	if val:
 		initConfigurationFile(val[0])
-	
-	Config.setProjectDir(os.getcwd())
+	else:
+		# If PROJECT_DIR is set in sys env then apply it.
+		os.chdir(FSUtil.check_path(Config.getProjectDir()))
 
 	appOptions, appArguments = parseArguments(rawArguments)
 
@@ -275,7 +285,7 @@ def main(rawArguments):
 
 	readConfig(Config.getConfigFName())
 
-	# After loaded configuration, some environments may have changed
+	# After loaded configuration, some environment can be changed
 	# synchronize configuration with env.
 	Config.update()
 
@@ -347,5 +357,11 @@ def main(rawArguments):
 
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+	try:
+
+		main(sys.argv[1:])
+
+	except Exception as e:
+		LOG.warn( e )
+
 	exitScript()
