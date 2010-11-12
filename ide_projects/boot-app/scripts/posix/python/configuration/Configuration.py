@@ -26,7 +26,11 @@ class KeyEntry(object):
 		return self.__defaultVal
 
 	def fromEnv(self):
-		return _Env.getVal(self.getKey(),self.getDefaultValue())
+		""" Retrieve value from local environment variables.
+			If declaration of this object has not been found then
+			returned value will be the equivalent with self.getDefaultValue
+		"""
+		return env.getEnv(self)
 
 	def __str__(self):
 		return self.__class__.__name__+"[ "+str(self.__key)+" , "+str(self.__defaultVal)+" ]"
@@ -34,6 +38,8 @@ class KeyEntry(object):
 KeyEntryType = KeyEntry
 
 class _Env (object):
+
+	""" Encapsulate data ..."""
 
 	_dict = {}
 	_exported = []
@@ -44,56 +50,26 @@ class _Env (object):
 			_Env._exported.extend(os.environ.keys())
 
 	@staticmethod
-	def put(kEntry,value=None):
-		if kEntry:
+	def put(newValue):
 
-			entryType = type(kEntry)
+		# Maybe add inspection whether element will be overwritten etc.
+		_Env._dict.update( newValue )
 
-			if entryType is StringType:
-				newValue = [[kEntry , value]]
-
-			elif entryType == KeyEntryType:
-				newValue = [[kEntry.getKey(), value]]
-
-			elif entryType is DictType :
-				newValue = kEntry
-
-			elif (entryType is ListType) or \
-				 			(entryType is TupleType):
-
-				newValue = [ kEntry ]
-
-			_Env._dict.update( newValue )
-
-			if LOG.isEnabledFor(logging.DEBUG-2):
-				LOG.debug("Inserted '%s' to enviroments variables",newValue)
+		if LOG.isEnabledFor(logging.DEBUG-2):
+			LOG.debug("Inserted '%s' to environment variables",newValue)
 
 	@staticmethod
-	def getVal(kEntry,defaultVal=None):
-
-		retValue = None
-		if kEntry:
-
-			entryType = type(kEntry)
-
-			if entryType == KeyEntryType:
-				# If defaultValue has not been set explicitly
-				# then use value from KeyEntry object
-				if not defaultVal:
-					defaultVal = kEntry.getDefaultValue()
-				kEntry = kEntry.getKey()
-
-			retValue = _Env._dict.get(kEntry)
-
-			if not retValue:
-				retValue = os.getenv(kEntry)
+	def getVal(key,defaultValue=None):
+		# search in local map
+		retValue = _Env._dict.get(key)
 
 		if not retValue:
-			retValue = defaultVal
+			#search in global map
+			retValue = os.getenv(key)
 
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("GetValue for Key: '%s', default: '%s' return: '%s'",kEntry,defaultVal,retValue)
-			
+		if not retValue:
+			retValue = defaultValue
+
 		return retValue
 
 	@staticmethod
@@ -105,12 +81,6 @@ class _Env (object):
 		print _Env._exported
 		print _Env._dict
 		print os.environ
-
-#	@staticmethod
-#	def getLocalEnv():
-#		""" Return dictionary of local variables"""
-#
-#		return _Env._dict
 
 	@staticmethod
 	def export(key,value=None):
@@ -165,71 +135,43 @@ class _Env (object):
 
 class Keys(object):
 
-	CONFIG_FName = KeyEntry("CONFIG_FP","runapp.conf")
-	DEPENDENCY_FName = KeyEntry("DEPENDENCY_FP","runapp.dep")
-	JVM_ARGS_FName = KeyEntry("JVM_ARGS_FP","runapp.jvmargs")
-	EXEC_TOOL = KeyEntry("EXEC_TOOL","")
-
-	M2_REPOSITORY = KeyEntry("M2_REPOSITORY",
+	CONFIG_FName 	= KeyEntry("CONFIG_FP","runapp.conf")
+	DEPENDENCY_FName= KeyEntry("DEPENDENCY_FP","runapp.dep")
+	JVM_ARGS_FName 	= KeyEntry("JVM_ARGS_FP","runapp.jvmargs")
+	EXEC_TOOL 		= KeyEntry("EXEC_TOOL","")
+	M2_REPOSITORY 	= KeyEntry("M2_REPOSITORY",
 							 os.path.expanduser('~')+os.sep+".m2"+os.sep+"repository")
-
-	MAIN_CLASS =  KeyEntry("MAINCLASS")
-	TESTING_MODE = KeyEntry("TESTING_MODE")
-	WAIT_ON_EXIT = KeyEntry("WAIT_ON_EXIT","1")
-	PRJ_DIR = KeyEntry("PROJECT_DIR")
-
-	USER_ARGS_TO_APP = KeyEntry("USER_ARGS_TO_APP",'')
-
-	LOG_CONF_FP = KeyEntry("LOG_CONF_FP","resources/configuration/logger/logging.conf")
+	MAIN_CLASS 		= KeyEntry("MAINCLASS")
+	TESTING_MODE	= KeyEntry("TESTING_MODE")
+	WAIT_ON_EXIT 	= KeyEntry("WAIT_ON_EXIT","1")
+	PRJ_DIR 		= KeyEntry("PROJECT_DIR" , os.getcwd() )
+	USER_ARGS_TO_APP= KeyEntry("USER_ARGS_TO_APP",'')
+	LOG_CONF_FP 	= KeyEntry("LOG_CONF_FP","resources/configuration/logger/logging.conf")
+	PROVIDER 		= KeyEntry("PROVIDER","java")
 
 	"""test"""
 	_HOME = KeyEntry("HOME")
 	_M2 = KeyEntry("M2")
 
 	_list = ( CONFIG_FName,
-			  DEPENDENCY_FName, \
-			  JVM_ARGS_FName, \
-			  EXEC_TOOL, \
-			  M2_REPOSITORY, \
-			  MAIN_CLASS, \
-			  TESTING_MODE, \
-			  WAIT_ON_EXIT, \
-			  _HOME,_M2, \
-			  PRJ_DIR, \
-			  USER_ARGS_TO_APP, \
-			  LOG_CONF_FP)
-
-	@staticmethod
-	def retrieveValue(entry):
-		retValue = None
-		if entry:
-			typeOf = type(entry)
-
-			if typeOf == StringType:
-				tmp = Keys.getKeyFromString(entry)
-				if not tmp:
-					retValue = _Env.getVal(entry)
-				else:
-					retValue = tmp.fromEnv()
-
-			elif typeOf == KeyEntryType:
-				retValue = entry.fromEnv()
-
-		return retValue
-
-	@staticmethod
-	def iValue(entry):
-		val = Keys.retrieveValue(entry)
-		if val:
-			val = int(val)
-		return val
+			  DEPENDENCY_FName,
+			  JVM_ARGS_FName,
+			  EXEC_TOOL,
+			  M2_REPOSITORY,
+			  MAIN_CLASS,
+			  TESTING_MODE,
+			  WAIT_ON_EXIT,
+			  _HOME,_M2,
+			  PRJ_DIR,
+			  USER_ARGS_TO_APP,
+			  LOG_CONF_FP,
+			  PROVIDER )
 
 	@staticmethod
 	def getKeyFromString(sKey):
 		for key in Keys._list:
 			if key.getKey() == sKey:
 				return key
-
 		return None
 
 	@staticmethod
@@ -239,204 +181,231 @@ class Keys(object):
 
 class Config(object):
 
-	_commentChar = '#'
-	_userDir = os.path.expanduser('~')
-
-	_configFName = Keys.CONFIG_FName.fromEnv()
-	_dependencyFName = Keys.DEPENDENCY_FName.fromEnv()
-	_jvmArgumentsFName =Keys.JVM_ARGS_FName.fromEnv()
-
-	_M2RepositoryFP = Keys.M2_REPOSITORY.fromEnv()
-
-	_provider = PROVIDERS[0]
-
-	_execTool = Keys.EXEC_TOOL.fromEnv()
-	_mainClass = Keys.MAIN_CLASS.fromEnv()
-	_testingMode  = Keys.TESTING_MODE.fromEnv()
-
-	_javaBinPath = None
-
-	_prjDir = None
+	# Immutable values
 
 	__scriptLocation = None
+
+	__scriptRootPath = None
+
+	__javaBinPath = None
+
+	__userDir = os.path.expanduser('~')
 
 	@staticmethod
 	def update():
 
-		#_configFName = Keys.CONFIG_FName.fromEnv()
-		_dependencyFName = Keys.DEPENDENCY_FName.fromEnv()
-		_jvmArgumentsFName =Keys.JVM_ARGS_FName.fromEnv()
+		if LOG.isEnabledFor(logging.DEBUG):
+			LOG.debug("Update environment variables !")
 
-		Config._M2RepositoryFP = Keys.M2_REPOSITORY.fromEnv()
-		if not Config._M2RepositoryFP:
-			env.put(Keys.M2_REPOSITORY,Config.getM2Repository())
-
-		_execTool = Keys.EXEC_TOOL.fromEnv()
-		_mainClass = Keys.MAIN_CLASS.fromEnv()
-		_testingMode  = Keys.TESTING_MODE.fromEnv()
-
-		if not Keys.PRJ_DIR.fromEnv():
-			Config.setProjectDir(os.getcwd())
+		tmpPrjDir = Config.getProjectDir()
+		if tmpPrjDir != os.getcwd():
+			tmpPrjDir = os.path.abspath(tmpPrjDir)
+			os.chdir(tmpPrjDir)
+			if LOG.isEnabledFor(logging.DEBUG-2):
+				LOG.debug("Directory changed to %s" % tmpPrjDir)
 
 
 	@staticmethod
 	def getScriptLocation():
+
+		""" Return the path to directory where boot script is placed.
+		"""
 		if not Config.__scriptLocation:
 			Config.__scriptLocation = os.path.dirname(os.path.abspath(sys.argv[0]))
+
 		return Config.__scriptLocation
 
 	@staticmethod
 	def getScriptRootPath():
-		return RootDir.determinePath()
+
+		""" Return the path to root directory of this script.
+			This path can be used as relative base point to the external resources.
+
+				ScriptRootDir/		<= base point
+					├── resources/
+					└── subDir1/
+
+			In practice this path is equivalent with Config.getScriptLocation()
+		"""
+		if not Config.__scriptRootPath:
+			Config.__scriptRootPath = RootDir.determinePath()
+
+		return Config.__scriptRootPath
 
 	@staticmethod
 	def getProjectDir():
-		return Config._prjDir
+		return Keys.PRJ_DIR.fromEnv()
 
 	@staticmethod
 	def setProjectDir(path):
-
-		Config._prjDir = path
-
-		_Env.put(Keys.PRJ_DIR,path)
 		
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Project dir has been set to '%s'.",path)
-
-	@staticmethod
-	def getConfigFName():
-		return Config._configFName
-
-	@staticmethod
-	def getDependencyFName():
-		return Config._dependencyFName
-
-	@staticmethod
-	def getJVMArgsFP():
-		return Config._jvmArgumentsFName
+		Config.__setValue(Keys.PRJ_DIR,path)
+		# TODO: What does if path not exists?
+		# Where should be protection ? before calling?
+		os.chdir(path)
+		if LOG.isEnabledFor(logging.DEBUG-2):
+			LOG.debug("Directory changed to %s" % path)
 
 	@staticmethod
 	def setConfigFName(path):
-		Config._configFName = path
-		
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Override configuration file name to '%s'.",path)
+		Config.__setValue(Keys.CONFIG_FName,path)
 
 	@staticmethod
 	def setDependencyFName(path):
-		Config._dependencyFName = path
-
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Override dependency file name to '%s'.",path)
+		Config.__setValue(Keys.DEPENDENCY_FName,path)
 
 	@staticmethod
 	def setProvider(provider):
-		Config._provider = provider
-
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.info("Provider has been set to %s",provider)
+		Config.__setValue(Keys.PROVIDER,provider)
 
 	@staticmethod
 	def setJVMArgsFName(path):
-		Config._jvmArgumentsFName = path
-
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Override jvm_args file name to '%s'.",path)
+		Config.__setValue(Keys.JVM_ARGS_FName,path)
 
 	@staticmethod
 	def setExecTool(tool):
-		Config._execTool = tool
-		_Env.put(Keys.EXEC_TOOL,tool)
-
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Set exec tool '%s'.",tool)
+		Config.__setValue(Keys.EXEC_TOOL,tool)
 
 	@staticmethod
 	def setMainClass(mainClass):
-		Config._mainClass = mainClass
-		env.put(Keys.MAIN_CLASS,mainClass)
+		Config.__setValue(Keys.MAIN_CLASS,mainClass)
 
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Set main class to '%s'.",mainClass)
 	@staticmethod
 	def setTestingMode(testingMode):
-		Config._testingMode = testingMode
+		Config.__setValue(Keys.TESTING_MODE,testingMode)
 
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("Set testing mode to '%s'.",testingMode)
+	@staticmethod
+	def __setValue(Key,value):
+		oldVal = Key.fromEnv()
+		if oldVal != value:
+			env.putEnv(Key,value)
+
+			if oldVal and LOG.isEnabledFor(logging.DEBUG):
+				LOG.debug("Override '%s' value '%s' => '%s'.",Key.getKey(),oldVal,value)
+
+	@staticmethod
+	def getConfigFName():
+		return Keys.CONFIG_FName.fromEnv()
+
+	@staticmethod
+	def getDependencyFName():
+		return Keys.DEPENDENCY_FName.fromEnv()
+
+	@staticmethod
+	def getJVMArgsFP():
+		return Keys.JVM_ARGS_FName.fromEnv()
 
 	@staticmethod
 	def getUserDir():
-		return Config._userDir
+		return str(Config.__userDir)
 
 	@staticmethod
 	def getM2Repository():
-		if not Config._M2RepositoryFP:
-			Config._M2RepositoryFP = Config._userDir+os.sep+".m2"+os.sep+"repository"
-		return Config._M2RepositoryFP
+		return Keys.M2_REPOSITORY.fromEnv()
 
 	@staticmethod
 	def getJavaBinPath():
-		if not Config._javaBinPath:
+		if not Config.__javaBinPath:
 			#!!! Invoked only once, uses for avoiding cyclic dependency with RALogging module.
 			#In function RALogging.initialize() is used Keys class
 
 			try:
 				from utils import Utils
-				Config._javaBinPath = Utils.resolveJavaPath()
+				Config.__javaBinPath = Utils.resolveJavaPath()
 			except ImportError, e:
 				LOG.warn("Unable to load Utils module: %s",e)
 
-		return Config._javaBinPath
+		return Config.__javaBinPath
 
 	@staticmethod
 	def getProvider():
-		return Config._provider
+		return Keys.PROVIDER.fromEnv()
 
 	@staticmethod
 	def getExecTool():
-		if not Config._execTool:
-			Config._execTool = Keys.EXEC_TOOL.fromEnv()
-		return Config._execTool
+		return Keys.EXEC_TOOL.fromEnv()
 
 	@staticmethod
 	def getMainClass():
-		if not Config._mainClass:
-			Config._mainClass = Keys.MAIN_CLASS.fromEnv()
-
-		return Config._mainClass
+		return Keys.MAIN_CLASS.fromEnv()
 
 	@staticmethod
 	def isTestingMode():
-		if Config._testingMode:
-			return True
-		return False
-
-	@staticmethod
-	def getCommentChar():
-		return Config._commentChar
+		return Keys.TESTING_MODE.fromEnv()
 
 class env:
-	""" Encapsulate data ..."""
-
+	""" Access to the Local environment variables via this object.
+	"""
 	@staticmethod
 	def putEnv(key,value=None):
 
-		_Env.put(key,value)
+		if key:
+
+			entryType = type(key)
+
+			if entryType is StringType:
+				newValue = [[key , value]]
+
+			elif issubclass(entryType ,KeyEntryType):
+				newValue = [[key.getKey(), value]]
+
+			elif entryType is DictType :
+				newValue = key
+
+			elif (entryType is ListType) or \
+				 			(entryType is TupleType):
+				newValue = [ key ]
+
+		_Env.put(newValue)
 
 	@staticmethod
-	def getEnv(kEntry,defaultVal=None):
-		retVal = None
-		if not defaultVal:
-			retVal = Keys.retrieveValue(kEntry)
-		else:
-			retVal = _Env.getVal(kEntry,defaultVal)
+	def getEnv(key,defaultVal=None):
+
+		""" Retrieve value assigned to the 'key'.
+
+			If default value is not defined then try to resolve it.
+		"""
+		retVal = defaultVal
+		if key:
+
+			entryType = type(key)
+
+			#For KeyEntry object
+			if issubclass(entryType,KeyEntryType):
+				# If defaultValue has not been set explicitly
+				# then use value from KeyEntry object
+				if not defaultVal:
+					defaultVal = key.getDefaultValue()
+				key = key.getKey()
+
+			#For string object
+			elif entryType == StringType:
+				if not defaultVal:
+					kEntry = Keys.getKeyFromString(key)
+					if kEntry:
+						defaultVal = kEntry.getDefaultValue()
+
+			retVal = _Env.getVal(key,defaultVal)
+
+		if LOG.isEnabledFor(logging.DEBUG):
+			LOG.debug("GetValue Key: '%s' return: '%s'",(key,defaultVal),retVal)
 
 		return retVal
 
 	@staticmethod
 	def export(key,val=None):
 		_Env.export(key,val)
+
+	@staticmethod
+	def getEnvInt(entry,defaultIntValue=-1):
+		val = env.getEnv(entry)
+
+		try:
+			val = int(val)
+		except :
+			val = defaultIntValue
+
+		return val
 
 	""" test """
 
