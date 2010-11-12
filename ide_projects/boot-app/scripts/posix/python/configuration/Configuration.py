@@ -44,11 +44,6 @@ class _Env (object):
 	_dict = {}
 	_exported = []
 
-	def __init__(self):
-		if not _Env._dict:
-			_Env._dict = dict()
-			_Env._exported.extend(os.environ.keys())
-
 	@staticmethod
 	def put(newValue):
 
@@ -88,7 +83,7 @@ class _Env (object):
 			if not key in _Env._exported:
 				_Env._exported.append(key)
 			if not key in _Env._dict:
-				_Env.put(key,value)
+				_Env.put( [[key,value]] )
 
 	@staticmethod
 	def unset(key):
@@ -102,14 +97,12 @@ class _Env (object):
 
 	@staticmethod
 	def getExportedVar():
-		list = []
+		mapOfExportedVars = dict(os.environ)
 		for key in _Env._exported:
 			val = _Env.getVal(key)
-			list.append((key,val))
-		return dict(list)
+			mapOfExportedVars.update([[key,val]])
 
-
-#env = _Env()
+		return mapOfExportedVars
 
 # Definition of global variables
 #
@@ -406,6 +399,11 @@ class env:
 			val = defaultIntValue
 
 		return val
+
+	@staticmethod
+	def getExportedVars():
+
+		return _Env.getExportedVar()
 
 	""" test """
 
