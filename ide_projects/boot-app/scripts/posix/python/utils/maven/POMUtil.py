@@ -34,107 +34,147 @@ class Entries:
 	MODULE = "module"
 
 	PROPERTIES = "properties"
+	SCOPE = "scope"
 
+def resolveFilePath(path):
+	if path:
+		path = os.path.expanduser(path)
+		
+		path = os.path.abspath(path)
+	return path
 
 class pom:
 
 	__env = {}
+	repositoryPath = ""
 
-	def resolveDependency(self,pom):
+	__searchInParent = False
+
+	def setSearchInParent(self,value):
+		self.__searchInParent = bool(value)
+
+	def isSearchInParent(self):
+		return self.__searchInParent
+
+	def __init__(self,repositoryPath=None):
+		if repositoryPath:
+			self.repositoryPath = resolveFilePath(repositoryPath)
+
+	def resolveDependency(self,pathPom):
 		pathToPomFile = None
 
-		pom = os.path.abspath(pom)
-		if os.path.isdir(pom):
-			pathToPomFile = os.path.join(pom,"pom.xml")
+		pathPom = resolveFilePath(pathPom)
+
+		if os.path.isdir(pathPom):
+			pathToPomFile = os.pathPom.join(pathPom,"pom.xml")
 		else:
-			pathToPomFile = pom
+			pathToPomFile = pathPom
 
 		print "Parse : ",pathToPomFile
 
 		DOMTree = xml.dom.minidom.parse(pathToPomFile)
 
-		return self.__parse( DOMTree.childNodes[0],
-						os.path.dirname(pathToPomFile) )
+		for node in DOMTree.childNodes:
+
+			if node.nodeType == xml.dom.Node.ELEMENT_NODE :
+				results = self.__parse( node ,
+									    os.path.dirname(pathToPomFile) )
+				return results
+
+		print "Elemnt node not found in '%s'" % pathPom
 
 	def __parse(self,rootElement,pomDir):
 		jarPaths = []
 
 		self.__updateProperties(rootElement)
 
-		modules = rootElement.getElementsByTagName(Entries.MODULES)
-		if modules:
-			if modules[0].hasChildNodes():
-				for child in modules[0].childNodes:
-					if child.nodeType == xml.dom.Node.ELEMENT_NODE:
-						moduleName = child.childNodes[0].nodeValue
+		if self.isSearchInParent() == True:
+			pom = self.__getParentPom(rootElement)
 
-						modulePath = os.path.join(pomDir,moduleName)
-						try:
+		modules = self.__getModules(rootElement)
 
-							tmpPaths = self.resolveDependency(modulePath)
-							jarPaths.extend(tmpPaths)
+		if len(modules) >0:
+			for moduleName in modules:
+				modulePath = os.path.join(pomDir,moduleName)
+				try:
 
-						except Exception, e:
-							print "Exception : ",e
+					tmpPaths = self.resolveDependency(modulePath)
 
-		jarPaths.extend(self.__resolveDependency(rootElement))
+					jarPaths.extend(tmpPaths)
+
+				except Exception as inst:
+					print "Exception : %s in %s" % (inst,pomDir)
+
+		dependencies =self.__resolveDependency(rootElement)
+		print "In ",pomDir," resolved ",len(dependencies)," dependencies"
+
+		jarPaths.extend(dependencies)
 
 		return jarPaths
+
+	def __getParentPom(self,rootElement):
+		props = rootElement.getElementsByTagName(Entries.PARENT)
+		if props:
+			values = self.__getNodeAsList(props[0])
+			#for value in values:	self.putEnv(value[0],value[1])
+			print values
 
 	def __getModules(self,rootElement):
 		listOfModules = []
-		modules = rootElement.getElementsByTagName(Entries.MODULES)
-		if modules:
-			modules = modules[0]
-			if modules.hasChildNodes():
-				for child in modules.childNodes:
-					if child.nodeType == xml.dom.Node.ELEMENT_NODE:
-						moduleName = child.childNodes[0].nodeValue
-						listOfModules.append(moduleName)
-
+		props = rootElement.getElementsByTagName(Entries.MODULES)
+		if props:
+			for node in self.__getNodeAsList(props[0]):
+				listOfModules.append(node[1])
 		return listOfModules
 
 	def __updateProperties(self,rootElement):
+
 		props = rootElement.getElementsByTagName(Entries.PROPERTIES)
 		if props:
-			props = props[0]
-			if props.hasChildNodes():
-				for child in props.childNodes:
-					if child.nodeType == xml.dom.Node.ELEMENT_NODE:
-						key = child.nodeName
-						value = child.childNodes[0].nodeValue
+			values = self.__getNodeAsList(props[0])
+			for value in values:	self.putEnv(value[0],value[1])
+			#print values
 
-						self.putEnv(key,value)
-
-	def __resolveDependency(self,xmlElement):
+	def __resolveDependency(self,rootElement):
 
 		jarPaths = []
-		elemDependencies = xmlElement.getElementsByTagName(Entries.DEPENDENCIES)
+		elemDependencies = rootElement.getElementsByTagName(Entries.DEPENDENCIES)
 
 		if elemDependencies:
 			elemDependencies=elemDependencies[0]
-			tags = (Entries.GROUP_ID,Entries.ARTIFACT_ID,Entries.VERSION)
 
 			if elemDependencies.hasChildNodes():
+				dependenciesMap = {}
 
 				for elemDependency in elemDependencies.childNodes:
 
-					if elemDependency.nodeType == xml.dom.Node.ELEMENT_NODE \
-							and elemDependency.localName == Entries.DEPENDENCY:
+					if elemDependency.nodeType == xml.dom.Node.ELEMENT_NODE:
 
-						jarPaths.append(self.__createPath(self.__resolveElementsOfPath(elemDependency,tags)))
+						nodeList = self.__getNodeAsList(elemDependency)
+						
+						for pair in nodeList:
+							dependenciesMap.update([pair])
+
+						jarPaths.append(self.__createPath(dependenciesMap,self.repositoryPath))
+						dependenciesMap.clear()
 
 		return jarPaths
 
-	def __resolveElementsOfPath(self,node,tags):
-		mvnElementsData = {}
+	def __getNodeAsList(self,element):
 
-		for tag in tags:
-			element = node.getElementsByTagName(tag)
-			if element:
-				mvnElementsData[tag] = element[0].childNodes[0].nodeValue
+		retValues = []
 
-		return mvnElementsData
+		#print element.toxml()
+
+		if element.hasChildNodes():
+			for child in element.childNodes:
+				if child.nodeType == xml.dom.Node.ELEMENT_NODE:
+					key = child.nodeName
+					value = child.childNodes[0].nodeValue
+
+					retValues.append( (key,value) )
+
+		return retValues
 
 	def __createPath(self,dependencyMap,prefixPath=""):
 
@@ -181,9 +221,7 @@ class pom:
 
 
 	def __putEnv__(self,key,value):
-
 		#print "putEnv: ",key," : ",value
-
 		self.__env.update([[key,value]])
 
 	def findVariable(self,val,defVal=None):
