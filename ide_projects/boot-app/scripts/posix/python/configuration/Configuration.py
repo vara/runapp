@@ -15,7 +15,10 @@ class KeyEntry(object):
 	__defaultVal = None
 
 	def __init__(self,key,defaultValue=None):
-		self.__key = key
+
+		KeyEntry.isValid(key)
+
+		self.__key = intern(key)
 		self.__defaultVal = defaultValue
 		#print self
 
@@ -25,12 +28,41 @@ class KeyEntry(object):
 	def getDefaultValue(self):
 		return self.__defaultVal
 
+	def reg(self):
+		"""
+			Register itself to Keys container
+		"""
+		Keys.registerKey(self)
+
 	def fromEnv(self):
 		""" Retrieve value from local environment variables.
 			If declaration of this object has not been found then
 			returned value will be the equivalent with self.getDefaultValue
 		"""
 		return env.getEnv(self)
+
+	@staticmethod
+	def _isValid(key_name):
+
+		length = len(key_name)
+		if length > 70 or length == 0 :
+			raise Exception("Name '%s' is too long must be less than 70 characters." % key_name)
+
+		for char in key_name:
+			if not KeyEntry.isValid(char):
+				raise Exception("Name '%s' contains illegal character '%s' " % (key_name,char))
+
+	@staticmethod
+	def isValid(char) :
+	    return KeyEntry.isAlpha(char) or KeyEntry.isDigit(char) or char == '_' or char == '-'
+
+	@staticmethod
+	def isAlpha(char):
+	    return (char >= 'a' and char <= 'z') or (char >= 'A' and char <= 'Z')
+
+	@staticmethod
+	def isDigit(char) :
+	    return char >= '0' and char <= '9'
 
 	def __str__(self):
 		return self.__class__.__name__+"[ "+str(self.__key)+" , "+str(self.__defaultVal)+" ]"
@@ -123,8 +155,6 @@ class _Env (object):
 # M2_REPOSITORY -- Path to maven repository
 # USER_ARGS_TO_APP --All arguments passed by user
 #
-# COMMENTCHAR   -- Used in configuration files
-# USAGE_FP      -- Path to file with text for usage information
 
 class Keys(object):
 
@@ -146,7 +176,7 @@ class Keys(object):
 	_HOME = KeyEntry("HOME")
 	_M2 = KeyEntry("M2")
 
-	_list = ( CONFIG_FName,
+	__list = [ CONFIG_FName,
 			  DEPENDENCY_FName,
 			  JVM_ARGS_FName,
 			  EXEC_TOOL,
@@ -154,22 +184,31 @@ class Keys(object):
 			  MAIN_CLASS,
 			  TESTING_MODE,
 			  WAIT_ON_EXIT,
-			  _HOME,_M2,
+			  _HOME,
+			  _M2,
 			  PRJ_DIR,
 			  USER_ARGS_TO_APP,
 			  LOG_CONF_FP,
-			  PROVIDER )
+			  PROVIDER ]
 
 	@staticmethod
 	def getKeyFromString(sKey):
-		for key in Keys._list:
+		for key in Keys.__list:
 			if key.getKey() == sKey:
 				return key
 		return None
 
 	@staticmethod
+	def registerKey(key_entry):
+		if issubclass(type(key_entry),KeyEntryType):
+			Keys.__list.append(key_entry)
+		else:
+			LOG.warn("You trying to added wrong type of object."
+				"Object: '%s' is not subclass of '$s'",type(key_entry),KeyEntryType)
+
+	@staticmethod
 	def printAllKeys():
-		for key in Keys._list:
+		for key in Keys.__list:
 			print key
 
 class Config(object):
