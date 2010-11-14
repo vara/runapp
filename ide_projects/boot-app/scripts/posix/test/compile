@@ -1,0 +1,69 @@
+#!/bin/sh
+
+SCRIPT_LOCATION=$0
+while [ -L "$SCRIPT_LOCATION" ]; do
+  SCRIPT_LOCATION=`readlink -e "$SCRIPT_LOCATION"`
+done
+SCRIPT_HOME=`dirname "$SCRIPT_LOCATION"`
+
+JAVAC="$JAVA_HOME/bin/javac"
+JAR="$JAVA_HOME/bin/jar"
+MAIN_JCLASS="test"
+DEST_LIB="$SCRIPT_HOME/lib"
+
+function checkClasspath(){
+  copyLibs $1
+}
+
+function copyLibs(){
+  paths=(${1//:/ })
+  for path in ${paths[@]};do
+	if [ ! -f "$path" ]; then
+	  echo "Error: Path not exists: $i"
+	  exit 2
+
+	elif [ -n "$2" ]; then
+		 libName=${path##*/}
+		 destFile="$DEST_LIB/$libName"
+
+		 if [ ! -f "$destFile" ]; then
+			cp $path $destFile
+			
+		 fi
+
+		 echo -n "$destFile "		 
+	fi
+  done
+}
+
+function cleanUp(){
+  
+  echo "Clean up ..."
+  rm *.class > /dev/null 2>&1
+  rm MANIFEST.MF > /dev/null 2>&1
+}
+
+
+#For test
+CPs=`eval "LOGGING=OFF ../runapp.sh --printDep"`
+#echo "Class parth: $CPs"
+#echo "-----------"
+checkClasspath $CPs
+#echo "-----------"
+
+echo "Compile java classes ..."
+compileString="$JAVAC -cp .:$CPs $MAIN_JCLASS.java"
+
+eval $compileString
+
+if [ "$?" = "0" ]; then
+  echo "Create executable jar file ..."
+  echo -e "Manifest-Version: 1.0\nMain-Class: $MAIN_JCLASS" > MANIFEST.MF  
+  JarCP=$(copyLibs ${CPs} "1")
+  echo "Class-Path: $JarCP" >> MANIFEST.MF
+  
+  eval "$JAR cmf MANIFEST.MF $MAIN_JCLASS.jar *.class"
+
+fi
+
+cleanUp
