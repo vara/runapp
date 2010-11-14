@@ -43,7 +43,7 @@ def resolveFilePath(path):
 		path = os.path.abspath(path)
 	return path
 
-class pom:
+class Pom:
 
 	__env = {}
 	repositoryPath = ""
@@ -58,27 +58,24 @@ class pom:
 
 	def __init__(self,repositoryPath=None):
 		if repositoryPath:
-			self.repositoryPath = resolveFilePath(repositoryPath)
+			self.repositoryPath = repositoryPath
 
-	def resolveDependency(self,pathPom):
-		pathToPomFile = None
+	def resolveDependency(self,pathToPom):
 
-		pathPom = resolveFilePath(pathPom)
+		pathToPom = resolveFilePath(pathToPom)
 
-		if os.path.isdir(pathPom):
-			pathToPomFile = os.pathPom.join(pathPom,"pom.xml")
-		else:
-			pathToPomFile = pathPom
+		if os.path.isdir(pathToPom):
+			pathToPom = os.path.join(pathToPom,"pom.xml")
 
-		print "Parse : ",pathToPomFile
+		print "Parse : ",pathToPom
 
-		DOMTree = xml.dom.minidom.parse(pathToPomFile)
+		DOMTree = xml.dom.minidom.parse(pathToPom)
 
 		for node in DOMTree.childNodes:
 
 			if node.nodeType == xml.dom.Node.ELEMENT_NODE :
 				results = self.__parse( node ,
-									    os.path.dirname(pathToPomFile) )
+									    os.path.dirname(pathToPom) )
 				return results
 
 		print "Elemnt node not found in '%s'" % pathPom
@@ -88,8 +85,8 @@ class pom:
 
 		self.__updateProperties(rootElement)
 
-		if self.isSearchInParent() == True:
-			pom = self.__getParentPom(rootElement)
+#		if self.isSearchInParent() == True:
+#			Pom = self.__getParentPom(rootElement)
 
 		modules = self.__getModules(rootElement)
 
