@@ -40,6 +40,10 @@ def initialize():
 	if debugLev:
 		getLogger().setLevel(int(debugLev))
 
+	disabled = os.getenv("LOGGING")
+	if disabled == "OFF":
+		logging.disable(logging.CRITICAL)
+
 class RALogger(logging.Logger):
 
 	def __init__(self,name):
