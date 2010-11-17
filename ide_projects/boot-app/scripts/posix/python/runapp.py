@@ -73,17 +73,17 @@ def readConfig(path,parserName="bash-parser"):
 		LOG.warn("Config file '%s' not exist",path)
 
 
-def __toCommandLineString(list,separator=':'):
-	cmdLine = ""
-
-	if list:
-		for (k,v) in list:
-			cmdLine += k
+def toCommandLineString(mapOfValues,separator=':'):
+	resultList = []
+	if mapOfValues:
+		tmpString=""
+		for (k,v) in mapOfValues:
+			tmpString = k
 			if v:
-				cmdLine+="="+v
-			cmdLine+=separator
+				tmpString+="="+v
+			resultList.append(tmpString)
 
-	return cmdLine
+	return separator.join(resultList)
 #
 # Print info about this script
 #
@@ -312,13 +312,13 @@ def main(rawArguments):
 	appArguments = Keys.USER_ARGS_TO_APP.fromEnv()+' '+Utils.toString(appArguments)
 
 	if Config.isJar() == False:
-		dependency = __toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
+		dependency = toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
 
 		if PRINT_DEPENDENCIES_AND_EXIT.fromEnv() :
 			print dependency
 			exitScript(0)
 
-		jvmArgs = __toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
+		jvmArgs = toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
 
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
