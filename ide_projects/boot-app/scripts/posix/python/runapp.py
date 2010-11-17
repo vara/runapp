@@ -13,7 +13,7 @@ RALogging.initialize()
 
 from utils import Utils
 from utils.Utils import OSUtil, FSUtil, Timer
-from configuration.Configuration import Config,Keys,env
+from configuration.Configuration import Config,Keys,env, KeyEntry
 from configuration.Parser import ParserManger
 
 START_TIME_MS = Timer.time()
@@ -25,6 +25,10 @@ USAGE_FP      = os.path.dirname(Config.getScriptRootPath())+os.sep+"usage.txt"
 
 LOG = RALogging.getLogger("runapp")
 #LOG.setLevel(RALogging.DEBUG)
+
+PRINT_DEPENDENCIES_AND_EXIT = KeyEntry("PRINT_DEPENDENCIES_AND_EXIT")
+
+Keys.registerKey(PRINT_DEPENDENCIES_AND_EXIT)
 
 def exitScript(exitCode=0):
 	wait = env.getEnvInt(Keys.WAIT_ON_EXIT)
@@ -108,8 +112,12 @@ def initConfigurationFile(argPath):
 		LOG.ndebug(1,"Initialize ROOT directory from path '%s'",argPath)
 
 	if os.path.isfile(argPath):
+		fileName = os.path.basename(argPath)
 
-		Config.setConfigFName(os.path.basename(argPath))
+		if fileName.endswith(".jar"):
+			Config.setJar(True)
+
+		Config.setConfigFName(fileName)
 
 		argPath = os.path.dirname(argPath)
 
@@ -121,7 +129,8 @@ def parseArguments(arguments):
 
 	try:
 		opts, args = getopt.getopt(arguments, "hp:ve:d:s", \
-				["help","version","testingMode","provider=","exec=","debug=","mainClass","testingMode","showKeys"])
+				["help","version","testingMode","provider=","exec=","debug=", \
+				"mainClass=","testingMode","showKeys","printDep"])
 
 		if LOG.isTrace():
 			LOG.trace('OPTIONS   : %s', opts)
@@ -169,6 +178,9 @@ def initializeCMDLOptions(opts):
 			Keys.printAllKeys()
 			exitScript(0)
 
+		elif o in ("--printDep",):
+			env.putEnv(PRINT_DEPENDENCIES_AND_EXIT,"true")
+
 		else:
 			LOG.warn("Not found or path {%s}" , o)
 
@@ -204,9 +216,14 @@ def resolveNonOptionFromList(val):
 			if LOG.isDebug(4):
 				LOG.ndebug(4,"Encountered to mark the end of arguments on %d index.",index)
 			objEndMarkEnt = index
+			break
 
-			if objNonOptionEnt: # If we have extracted non-option then we have nothing to do
-				break
+			#@Author Grzegorz (vara) Warywoda 2010-11-13 06:43:08 CET
+			# Problem with app. which take arguments without prefixes
+			# runapp dir -- 1 2; ok but runapp -- 1 2; wrong !!!
+
+#			if objNonOptionEnt: # If we have extracted non-option then we have nothing to do
+#				break
 
 		if not objNonOptionEnt: # blocked opportunity override
 			if __isOption(arg) == False:
@@ -250,9 +267,9 @@ def main(rawArguments):
 	# Examined cases:
 	#	1. runapp ~/dir -opts -- -appOpts  => ['-opts', '--', '-appOpts']
 	#   2. runapp -opts ~/dir -- -appOpts  => ['-opts', '--', '-appOpts'] 
-	#   3. runapp -opts -- ~/dir -appOpts  => ['-opts', '--', '-appOpts']
-	#   4. runapp -opts -- -appOpts ~/dir  => ['-opts', '--', '-appOpts']
-	#   5. runapp -opts ~/dir
+	#   3. runapp -opts -- ~/dir -appOpts  => ['-opts', '--', '~/dir', '-appOpts']
+	#   4. runapp -opts -- -appOpts ~/dir  => ['-opts', '--', '-appOpts', '~/dir']
+	#   5. runapp -opts ~/dir              => ['-opts']
 	#	6. runapp  ... ( without dir )
 	#	7. runapp -opts ~/dir -appOpts     => ['-opts', '--', '-appOpts']
 	#
@@ -283,42 +300,55 @@ def main(rawArguments):
 	# Allow us to overriding parameters defined in config file
 	# Is useful for testing app, when i wants quick change variable
 
-	readConfig(Config.getConfigFName())
+	if Config.isJar() == False:
+		readConfig(Config.getConfigFName())
 
-	# After loaded configuration, some environment can be changed
-	# synchronize configuration with env.
-	Config.update()
+		# After loaded configuration, some environment can be changed
+		# synchronize configuration with env.
+		Config.update()
 
 	initializeCMDLOptions(appOptions)
 
 	appArguments = Keys.USER_ARGS_TO_APP.fromEnv()+' '+Utils.toString(appArguments)
 
+	if Config.isJar() == False:
+		dependency = __toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
+
+		if PRINT_DEPENDENCIES_AND_EXIT.fromEnv() :
+			print dependency
+			exitScript(0)
+
+		jvmArgs = __toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
+
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
 		exitScript()
 
-	if not Config.getMainClass():
-		LOG.error("Main class not found. Please set 'MAINCLASS' variable.")
-		exitScript(2)
+	if Config.isJar() == False:
 
-	dependency = __toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
-	jvmArgs = __toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
+		if not Config.getMainClass():
+			LOG.error("Main class not found. Please set 'MAINCLASS' variable.")
+			exitScript(2)
 
 	provider = Config.getProvider().lower()
 
 	execPath = None
 	execArgs = None
 
-	if provider == "java":
+	if provider == "java" or Config.isJar() == True:
 
-		#Fix: When path contains white space. C:\\Program Files\... 
+		# Fixed: When path contains white space. C:\\Program Files\... 
 		execPath = "\"" + Config.getJavaBinPath() + "\""
-		execArgs = jvmArgs
 
-		if len(dependency) > 1:
-			execArgs += " -cp "+dependency
+		if Config.isJar() == False:
+			execArgs = jvmArgs
 
-		execArgs += " "+Config.getMainClass()+" "+appArguments
+			if len(dependency) > 1:
+				execArgs += " -cp "+dependency
+
+			execArgs += " "+Config.getMainClass()+" "+appArguments
+		else:
+			execArgs = "-jar "+Config.getConfigFName()+" "+appArguments
 
 	elif provider == "maven":
 		LOG.warn("Maven provider not implenebted yet !")

@@ -213,6 +213,8 @@ class Keys(object):
 
 class Config(object):
 
+	__isJar = False
+
 	# Immutable values
 
 	__scriptLocation = None
@@ -364,6 +366,14 @@ class Config(object):
 	@staticmethod
 	def isTestingMode():
 		return Keys.TESTING_MODE.fromEnv()
+
+	@staticmethod
+	def isJar():
+		return bool(Config.__isJar)
+
+	@staticmethod
+	def setJar(boolean):
+		Config.__isJar = bool(boolean)
 
 class env:
 	""" Access to the Local environment variables via this object.
