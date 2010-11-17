@@ -360,7 +360,8 @@ def main(rawArguments):
 	globalVariables = env.getExportedVars()
 
 	if LOG.isDebug():
-
+		if LOG.isTrace():
+			LOG.trace("ClassPath: %s" % dependency )
 		LOG.debug("Exec tool: '%s'",Config.getExecTool())
 		LOG.debug("Exec path: '%s'",execPath)
 		LOG.debug("JVM Parameters: '%s'",jvmArgs)
