@@ -73,7 +73,7 @@ def readConfig(path,parserName="bash-parser"):
 		LOG.warn("Config file '%s' not exist",path)
 
 
-def toCommandLineString(mapOfValues,separator=':'):
+def toCommandLineString(mapOfValues,separator=os.pathsep):
 	resultList = []
 	if mapOfValues:
 		tmpString=""
