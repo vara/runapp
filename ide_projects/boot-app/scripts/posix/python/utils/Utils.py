@@ -5,15 +5,38 @@
 # Since: 2010-11-03 14:25:36 CET
 #
 
-import os, sys, datetime, commands, traceback
-from logger import RALogging
+import os, sys, datetime, commands, traceback, string
 
-LOG = RALogging.getLogger("utils.logger")
+def getAbsDirName(path,topLevels=0):
+
+	"""
+		Get absolute path to directory for argumnet 'path'.
+		Second argument determine how many top-level directories should be ommited.
+		
+		e.q.
+		 	f = /dir3/dir2/dir1/dir0
+			getAbsDirName(f)	=> /dir3/dir2/dir1/dir0
+			getAbsDirName(f,2)	=> /dir3/dir2
+	"""
+
+	if os.path.islink(path):
+		path = os.path.realpath(path)
+	path = os.path.abspath(path)
+
+	if os.path.isfile(path):
+		path = os.path.dirname(path)
+
+	if topLevels > 0:
+		for i in range(0,topLevels):
+			path = os.path.dirname(path)
+	return path
 
 def printStackTrace():
 	traceback.print_stack()
 
 def getClass( clazz ):
+	""" Load/retrieve class dynamically """
+
 	parts = clazz.split('.')
 	module = ".".join(parts[:-1])
 	m = __import__( module )
@@ -21,7 +44,19 @@ def getClass( clazz ):
 		m = getattr(m, comp)
 	return m
 
+"""Workaround for resolving modules properly"""
+if __name__ == "__main__":
+	sys.path.append( getAbsDirName(__file__,1))
+
+from logger import RALogging
+LOG = RALogging.getLogger("utils.logger")
+
+
 def resolveJavaPath() :
+
+	#@Author Grzegorz (vara) Warywoda 2010-11-13 08:16:01 CET
+	# Fix: local variable '_javaBin' referenced before assignment when env wll not be set
+	_javaBin = None
 
 	for value in ("JAVA_HOME","JRE_HOME","JDK_HOME") :
 		if os.getenv(value) != None:
@@ -70,11 +105,9 @@ def resolveJavaPath() :
 	return _javaBin
 
 def resolveMavenPath():
-	_mvn = os.getenv("M2_HOME")
-	if _mvn != None:
-		suffix = os.sep+"bin"+os.sep+"mvn"
-		_mvn += suffix
+	_mvn = MvnUtil.findPath()
 	return _mvn
+
 
 def toString(data,separator=' '):
 	retVal=""
@@ -88,7 +121,14 @@ class FSUtil(object):
 
 	@staticmethod
 	def resolveSymlink(path):
+		if os.path.islink (path):
+			path = os.path.realpath(path)
 		return os.path.abspath(path)
+
+	@staticmethod
+	def check_path(path):
+		path = os.path.expanduser(path)
+		return FSUtil.resolveSymlink(path)
 
 class OSUtil(object):
 
@@ -156,27 +196,65 @@ class Timer(object):
 		return currentTimeMS
 
 	@staticmethod
-	def stamp(milli,msg=None):
+	def stamp(milli,msg=""):
 		elapsed = Timer.time(milli)
-		if msg:
-			print msg
-		print "et:%d" % elapsed
+		print "%s et:%d" % (msg,elapsed)
 
+from xml.dom import minidom
+
+class MvnUtil:
+	POM_NS = "{http://maven.apache.org/POM/4.0.0}"
+
+	@staticmethod
+	def findPath():
+		_mvn = os.getenv("M2_HOME")
+		if _mvn != None:
+			suffix = os.sep+"bin"+os.sep+"mvn"
+			_mvn += suffix
+		return _mvn
+
+	@staticmethod
+	def parse(pathToPom,searchInParent=False):
+		"""
+		Parses the POM to get a list of file path pairs returned by buildPath()
+		"""
+		from maven import POMUtil
+
+		pom = POMUtil.Pom(os.path.expanduser("~/.m2/repository"))
+
+		pom.setSearchInParent(searchInParent)
+
+		list = pom.resolveDependency(os.path.expanduser(pathToPom))
+		if list:
+			list =MvnUtil.__removeDuplicatedPaths(list)
+		else: list = []
+
+		return list
+
+	@staticmethod
+	def __removeDuplicatedPaths(arrayList):
+		return dict.fromkeys(arrayList).keys()
+		#return list(set(arrayList))
 
 """ test """
 
 if __name__ == "__main__":
 	start = Timer.time()
 
+	RALogging.initialize()
+
 	print "Linux :", bool(OSUtil.isLinux()),\
 		"\nWindows :", bool(OSUtil.isWin()) ,\
 		"\nMacOS :", bool(OSUtil.isMac())
 
 	print "Resolve sym link method ", FSUtil.resolveSymlink(".")
+	print "JavaPath : %s" % resolveJavaPath()
+	
+	dependencyList = MvnUtil.parse("~/varaprj/jklipper/ide_projects/jklipper.utils")
+	print "Number of found dependecies ",len(dependencyList)
+	for p in dependencyList:
+		print p[0]
 
-	print "JavaPath : %s",resolveJavaPath()
-
-	Timer.stamp(start,"Elapsed time of boot application")
-
+	Timer.stamp(start)
 
 
