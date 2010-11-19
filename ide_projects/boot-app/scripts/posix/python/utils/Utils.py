@@ -197,8 +197,35 @@ class Timer(object):
 
 	@staticmethod
 	def stamp(milli,msg=""):
+		print Timer.toString(milli,msg)
+
+	@staticmethod
+	def toString(milli,msg=""):
 		elapsed = Timer.time(milli)
-		print "%s et:%d" % (msg,elapsed)
+		sTime = Timer.__format(elapsed)
+		return msg + " et: " + sTime
+
+	@staticmethod
+	def __format(milliseconds):
+		sb = ''
+		if milliseconds > 1000:
+
+			sec = int(milliseconds/1000)
+			milliseconds = milliseconds % 1000
+
+			if sec > 60:
+				min = int(sec /60)
+				sec%=sec
+				if min > 60:
+					hour = int(min /60)
+					min%=min
+					sb+= str(hour) + "h "
+
+				sb+=str(min) + "m "
+			sb+= str(sec) + "s "
+
+		sb += str(milliseconds) +"ms"
+		return sb
 
 from xml.dom import minidom
 
@@ -255,6 +282,6 @@ if __name__ == "__main__":
 	for p in dependencyList:
 		print p[0]
 
-	Timer.stamp(start)
+	Timer.stamp(start,"Time of working application")
 
 
