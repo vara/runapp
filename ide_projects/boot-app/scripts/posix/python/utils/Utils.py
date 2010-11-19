@@ -49,7 +49,7 @@ if __name__ == "__main__":
 	sys.path.append( getAbsDirName(__file__,1))
 
 from logger import RALogging
-LOG = RALogging.getLogger("utils.logger")
+LOG = RALogging.getLogger("utils")
 
 
 def resolveJavaPath() :
@@ -189,7 +189,8 @@ class Timer(object):
 		dTime = datetime.datetime.now()
 		currentTimeMS = long(dTime.microsecond/1000 + (dTime.second + ( (dTime.minute + (dTime.hour*60))*60)) *1000 )
 
-	#	print "Current time : " ,currentTime , "Stop time: ",stopTimeMilli
+		if LOG.isTrace():
+			LOG.trace("Current time : %s Stop time: %s" ,currentTimeMS,stopTimeMilli)
 
 		if stopTimeMilli:
 			currentTimeMS = currentTimeMS - stopTimeMilli
@@ -215,10 +216,10 @@ class Timer(object):
 
 			if sec > 60:
 				min = int(sec /60)
-				sec%=sec
+				sec%=60
 				if min > 60:
 					hour = int(min /60)
-					min%=min
+					min%=60
 					sb+= str(hour) + "h "
 
 				sb+=str(min) + "m "
