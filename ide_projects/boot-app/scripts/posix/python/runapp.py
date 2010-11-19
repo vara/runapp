@@ -394,11 +394,11 @@ def main(rawArguments):
 
 
 if __name__ == "__main__":
-	try:
+	#try:
 
-		main(sys.argv[1:])
+	main(sys.argv[1:])
 
-	except Exception as e:
-		LOG.warn( e )
+	#except Exception as e:
+	#	LOG.warn("%s %s" % (sys.exc_info()[0], e) )
 
 	exitScript()
