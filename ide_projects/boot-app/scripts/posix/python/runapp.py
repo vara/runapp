@@ -311,11 +311,14 @@ def main(rawArguments):
 
 	appArguments = Keys.USER_ARGS_TO_APP.fromEnv()+' '+Utils.toString(appArguments)
 
+	dependency=None
+	jvmArgs = None
+
 	if Config.isJar() == False:
 		dependency = toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
 
 		if PRINT_DEPENDENCIES_AND_EXIT.fromEnv() :
-			print dependency
+			print dependency.replace(":","\n")
 			exitScript(0)
 
 		jvmArgs = toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
@@ -384,7 +387,7 @@ def main(rawArguments):
 
 		process.wait()
 
-		LOG.info("Application working time: %d",Timer.time(workingTime))
+		LOG.info(Timer.toString(workingTime,"Application working time"))
 
 		if LOG.isDebug():
 			LOG.debug("The application has finished work ! [exitcode:%d]",process.returncode)
