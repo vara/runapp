@@ -141,6 +141,8 @@ class BashParserImpl(ConfigParser):
 
 	__Commands = ( AltCommand(),ExportCommnad())
 
+	asSeparatorCharList = (__marker,' ','.')
+
 	def parseLine(self,textLine,info):
 
 		if LOG.isDebug(1):
@@ -225,7 +227,7 @@ class BashParserImpl(ConfigParser):
 			# For $VARIABLE
 			else:
 
-				closeIndex = _get_index_for_first(value,(self.__marker,' '),index+1, textLength)
+				closeIndex = _get_index_for_first(value,self.asSeparatorCharList,index+1, textLength)
 
 				parameter = value[index+1:closeIndex]
 
