@@ -20,6 +20,25 @@ def findIndex(text,pattern,fromIndex=0):
 		pass
 	return -1
 
+"""
+Maven provides four dependency scopes:
+
+compile:
+			A compile-scope dependency is available in all phases. This is the default value.
+
+provided:
+			A provided dependency is used to compile the application,
+			but will not be deployed. You would use this scope when
+			you expect the JDK or application server to provide the JAR.
+			The servlet APIs are a good example.
+
+runtime:
+			Runtime-scope dependencies are not needed for compilation, only for execution,
+ 			such as JDBC (Java Database Connectivity) drivers.
+
+test:
+			Test-scope dependencies are needed only to compile and run tests (JUnit, for example).
+"""
 
 class Entries:
 
