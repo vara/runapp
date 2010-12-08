@@ -2,6 +2,8 @@
 
 #set -x
 
+export FORCE_PYTHON=1
+
 SCRIPT_LOCATION=$0
 # Step through symlinks to find where the script really is
 while [ -L "$SCRIPT_LOCATION" ]; do
