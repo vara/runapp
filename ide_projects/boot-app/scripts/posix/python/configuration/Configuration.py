@@ -385,6 +385,9 @@ class env:
 
 			entryType = type(key)
 
+			if LOG.isEnabledFor(logging.DEBUG):
+				LOG.debug("Insert to Environment typeOf : '%s'", entryType)
+
 			if entryType is StringType:
 				newValue = [[key , value]]
 
