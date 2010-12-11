@@ -32,6 +32,9 @@ def getAbsDirName(path,topLevels=0):
 
 os.sys.path.append( getAbsDirName(__file__,1))
 
+from logger import RALogging
+RALogging.initialize()
+
 import configuration.Configuration
 
 def insertVar(key,value):

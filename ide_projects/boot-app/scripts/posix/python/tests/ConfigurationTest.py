@@ -30,6 +30,8 @@ class EnvironmentTest(unittest.TestCase):
 		_Env._dict.clear()
 
 	def testGetEnvMethod(self):
+		print "Test Environment : method Get"
+
 		expected = "test"
 
 		#Only for test
@@ -85,7 +87,6 @@ class EnvironmentTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-	logger.RALogging.initialize()
 	unittest.main()
 
 
