@@ -10,14 +10,16 @@ JAVAC="$JAVA_HOME/bin/javac"
 JAR="$JAVA_HOME/bin/jar"
 MAIN_JCLASS="test"
 DEST_LIB="$SCRIPT_HOME/lib"
+RUNAPP="../runapp.sh"
 
 function checkClasspath(){
   copyLibs $1
 }
 
 function copyLibs(){
-  paths=(${1//:/ })
-  for path in ${paths[@]};do
+  #paths=(${1//:/ })
+  tmpIFS="$IFS"
+  IFS=':' ; for path in $1 ; do
 	if [ ! -f "$path" ]; then
 	  echo "Error: Path not exists: $i"
 	  exit 2
@@ -34,18 +36,19 @@ function copyLibs(){
 		 echo -n "$destFile "		 
 	fi
   done
+  IFS=$tmpIFS
 }
 
 function cleanUp(){
   
   echo "Clean up ..."
-  rm *.class > /dev/null 2>&1
+  #rm *.class > /dev/null 2>&1
   rm MANIFEST.MF > /dev/null 2>&1
 }
 
 
 #For test
-CPs=`eval "LOGGING=OFF ../runapp.sh --printDep"`
+CPs=`eval "LOGGING=OFF $RUNAPP --printDep"`
 #echo "Class parth: $CPs"
 #echo "-----------"
 checkClasspath $CPs
@@ -59,6 +62,9 @@ eval $compileString
 if [ "$?" = "0" ]; then
   echo "Create executable jar file ..."
   echo -e "Manifest-Version: 1.0\nMain-Class: $MAIN_JCLASS" > MANIFEST.MF  
+
+
+  # Because jar only respects relative paths to dependencies
   JarCP=$(copyLibs ${CPs} "1")
   echo "Class-Path: $JarCP" >> MANIFEST.MF
   
