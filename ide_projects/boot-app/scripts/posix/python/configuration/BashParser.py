@@ -141,7 +141,7 @@ class BashParserImpl(ConfigParser):
 
 	__Commands = ( AltCommand(),ExportCommnad())
 
-	asSeparatorCharList = (__marker,' ','.')
+	asSeparatorCharList = (__marker,' ','.','/')
 
 	def parseLine(self,textLine,info):
 
