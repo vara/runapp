@@ -39,6 +39,10 @@ class ConfigParser:
 		if LOG.isDebug():
 			LOG.debug("Prepare to read config file %s",pathToFile)
 
+		if not os.path.exists(pathToFile) :
+			LOG.warn("Config file '%s' not exist",pathToFile)
+			return
+
 		file = open(pathToFile,'r')
 		fLines = file.readlines()
 		file.close()
@@ -101,10 +105,15 @@ class ConfigParser:
 		return results
 
 	def results(self):
-		retVal = (self.__cachedResults.items())
-		self.__cachedResults.clear()
+		retVal = None
+		if self.__cachedResults:
+			retVal = (self.__cachedResults.items())
+			self.__cachedResults.clear()
 		return retVal
 
+	"""
+	 Default value is set to True
+	"""
 	def setAutoUpdateEnv(self,value):
 
 		if isinstance(value,bool):

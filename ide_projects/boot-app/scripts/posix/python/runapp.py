@@ -42,36 +42,16 @@ def exitScript(exitCode=0):
 
 	exit(exitCode)
 
-def readConfig2(path,parserName="bash-parser"):
-	if os.path.exists(path) :
-
-		parser = ParserManger.getParserByName(parserName)
-		if parser:
-			parser.setAutoUpdateEnv(False)
-			parser.open(path)
-			results = parser.results()
-			return results
-		else:
-			LOG.warn("Parser '%s' not found !",parserName)
-
-	else:
-		LOG.warn("Config file '%s' not exist",path)
-
-def readConfig(path,parserName="bash-parser"):
+def readConfig(path,parserName="bash-parser",auto_update=True):
 	path = FSUtil.resolveSymlink(path)
-	if os.path.exists(path) :
-
-		parser = ParserManger.getParserByName(parserName)
-		if parser:
-			parser.open(path)
-			results = parser.results()
-			return results
-		else:
-			LOG.warn("Parser '%s' not found !",parserName)
-
+	parser = ParserManger.getParserByName(parserName)
+	if parser:
+		parser.setAutoUpdateEnv(auto_update)
+		parser.open(path)
+		results = parser.results()
+		return results
 	else:
-		LOG.warn("Config file '%s' not exist",path)
-
+		LOG.warn("Parser '%s' not found !",parserName)
 
 def toCommandLineString(mapOfValues,separator=os.pathsep):
 	resultList = []
@@ -88,7 +68,7 @@ def toCommandLineString(mapOfValues,separator=os.pathsep):
 # Print info about this script
 #
 def printInfo():
-	print "Author: Grzegorz (vara) Warywoda\nContact: war29@wp.pl\nrunapp v%s\n" % VERSION
+	print "Author: Grzegorz (vara) Warywoda\nContact: grzegorz.warywoda@gmail.com\nrunapp v%s\n" % VERSION
 
 def printUsage():
 	printInfo()
@@ -315,13 +295,13 @@ def main(rawArguments):
 	jvmArgs = None
 
 	if Config.isJar() == False:
-		dependency = toCommandLineString(readConfig2(Config.getDependencyFName(),"bash-path-parser"))
+		dependency = toCommandLineString(readConfig(Config.getDependencyFName(),"bash-path-parser",False))
 
 		if PRINT_DEPENDENCIES_AND_EXIT.fromEnv() :
 			print dependency.replace(":","\n")
 			exitScript(0)
 
-		jvmArgs = toCommandLineString(readConfig2(Config.getJVMArgsFP()),' ')
+		jvmArgs = toCommandLineString(readConfig(Config.getJVMArgsFP(),auto_update=False),' ')
 
 	if not Config.getJavaBinPath():
 		LOG.error("Java not found, set JAVA_HOME in envirioment variables")
