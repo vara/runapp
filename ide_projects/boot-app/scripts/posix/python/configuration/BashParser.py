@@ -4,6 +4,7 @@ import os,string
 from logger import RALogging
 from Parser import ConfigParser
 from configuration.Configuration import Config,env
+import glob
 
 LOG = RALogging.getLogger("parser-bash")
 
@@ -257,16 +258,34 @@ class BashParserImpl(ConfigParser):
 class FilePathResolverParser(BashParserImpl):
 
 	def postProcess(self,results,info):
+		if results[0] == None:
+			return None
+
+		path = results[0]+""
 
 		if LOG.isTrace():
 			LOG.trace("[%s:%d] %s",info.getFileName(),info.getLineNumber(),results)
 
-		if self.checkPath(results[0]) == False:
-			if LOG.isWarn():
-				LOG.warn("!!! NOT EXISTS [%s:%d] '%s'",info.getFileName(),info.getLineNumber(),results[0])
-			results =  None
+		if path.startswith(os.sep) == False:
+			path = Config.getProjectDir()+os.sep+path
+			if LOG.isTrace():
+				LOG.trace("***Path changed to '%s' ",path)
+
+		files = glob.glob(path)
+		count = len(files)
+
+		if count == 0:
+			results = None
+		elif count == 1:
+			results[0] = files[0]
+		else:
+			results = dict.fromkeys(files)
+
+		if results == None and LOG.isWarn():
+			LOG.warn("!!! NOT EXISTS [%s:%d] '%s'",info.getFileName(),info.getLineNumber(),path)
 
 		return results
+
 
 	def checkPath(self,path):
 		if not os.path.exists(path):
