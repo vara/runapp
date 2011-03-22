@@ -11,26 +11,4 @@ if test $# -eq 0 ; then
 	exit
 fi
 
-outs(){
-	echo -e "\t${currentRow})${2}"	
-}
-
-for filename in `grep -rl "$2" $1` ; do
-	if test -e $filename ; then		
-		echo  "------ Start parsing $filename ------"
-#str="`fgrep $filename -bHe "$2"`\n"
-		exec<$filename
-		currentRow=0;
-		while read -e line;	do
-			let currentRow++
-			line=`echo $line | grep -bHe "$2"`
-			
-			if [ -n "$line" ]; then
-				outs $line
-			fi
-		done
-		echo  "------ Finished parsing $filename ------"
-	else
-		echo "Cannot find $filename"
-	fi
-done
+/usr/bin/find $0 -type f -name $1 -print0 | xargs -0 /usr/bin/grep --color=auto -n -C 3 -w "$2"
