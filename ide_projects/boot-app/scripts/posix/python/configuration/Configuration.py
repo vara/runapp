@@ -67,6 +67,11 @@ class KeyEntry(object):
 	def __str__(self):
 		return self.__class__.__name__+"[ "+str(self.__key)+" , "+str(self.__defaultVal)+" ]"
 
+	def updateValue(self,value):
+		if not value:
+			value = self.__defaultVal
+		_Env.put( [[self.__key,value]] )
+
 KeyEntryType = KeyEntry
 
 class _Env (object):
@@ -96,6 +101,9 @@ class _Env (object):
 
 		if not retValue:
 			retValue = defaultValue
+
+		if LOG.isEnabledFor(logging.DEBUG):
+			LOG.debug("GetValue Key: '%s' return: '%s'",(key,defaultValue),retValue)
 
 		return retValue
 
@@ -136,6 +144,24 @@ class _Env (object):
 
 		return mapOfExportedVars
 
+class PrjDirEntry (KeyEntry):
+	def updateValue(self,path):
+
+		if path.startswith("/") == False:
+			newPath = os.getcwd()+os.sep+path
+		else:
+			newPath = path
+
+		if os.path.isfile(newPath):
+			newPath = os.path.dirname(newPath)
+
+		_Env.put( [[self.getKey(),newPath]] )
+		# TODO: What does if path not exists?
+		# Where should be protection ? before calling?
+		os.chdir(path)
+		if LOG.isEnabledFor(logging.DEBUG-2):
+			LOG.debug("Directory changed to %s" % newPath)
+
 # Definition of global variables
 #
 # SCRIPT_HOME   -- Path to directory where is this script placed
@@ -167,7 +193,7 @@ class Keys(object):
 	MAIN_CLASS 		= KeyEntry("MAINCLASS")
 	TESTING_MODE	= KeyEntry("TESTING_MODE")
 	WAIT_ON_EXIT 	= KeyEntry("WAIT_ON_EXIT","1")
-	PRJ_DIR 		= KeyEntry("PROJECT_DIR" , os.getcwd() )
+	PRJ_DIR 		= PrjDirEntry("PROJECT_DIR" , os.getcwd() )
 	USER_ARGS_TO_APP= KeyEntry("USER_ARGS_TO_APP",'')
 	LOG_CONF_FP 	= KeyEntry("LOG_CONF_FP","resources/configuration/logger/logging.conf")
 	PROVIDER 		= KeyEntry("PROVIDER","java")
@@ -231,12 +257,12 @@ class Config(object):
 		if LOG.isEnabledFor(logging.DEBUG):
 			LOG.debug("Update environment variables !")
 
-		tmpPrjDir = Config.getProjectDir()
-		if tmpPrjDir != os.getcwd():
-			tmpPrjDir = os.path.abspath(tmpPrjDir)
-			os.chdir(tmpPrjDir)
-			if LOG.isEnabledFor(logging.DEBUG-2):
-				LOG.debug("Directory changed to %s" % tmpPrjDir)
+#		tmpPrjDir = Config.getProjectDir()
+#		if tmpPrjDir != os.getcwd():
+#			tmpPrjDir = os.path.abspath(tmpPrjDir)
+#			os.chdir(tmpPrjDir)
+#			if LOG.isEnabledFor(logging.DEBUG-2):
+#				LOG.debug("Directory changed to %s" % tmpPrjDir)
 
 
 	@staticmethod
@@ -272,13 +298,7 @@ class Config(object):
 
 	@staticmethod
 	def setProjectDir(path):
-		
-		Config.__setValue(Keys.PRJ_DIR,path)
-		# TODO: What does if path not exists?
-		# Where should be protection ? before calling?
-		os.chdir(path)
-		if LOG.isEnabledFor(logging.DEBUG-2):
-			LOG.debug("Directory changed to %s" % path)
+		Keys.PRJ_DIR.updateValue(path)
 
 	@staticmethod
 	def setConfigFName(path):
@@ -389,23 +409,28 @@ class env:
 				LOG.log(5,"Insert to Environment typeOf : '%s'", entryType)
 
 			if entryType is StringType:
-				newValue = [[key , value]]
+
+				kEntry = Keys.getKeyFromString(key)
+				if kEntry:
+					kEntry.updateValue(value)
+				else:
+					_Env.put([[key , value]])
 
 			elif issubclass(entryType ,KeyEntryType):
 
-				if not value:
-					value = key.getDefaultValue()
-
-				newValue = [[key.getKey(), value]]
+				key.updateValue(value)
 
 			elif entryType is DictType :
-				newValue = key
+
+				_Env.put( key )
 
 			elif (entryType is ListType) or \
 				 			(entryType is TupleType):
-				newValue = [ key ]
-
-		_Env.put(newValue)
+				kEntry = Keys.getKeyFromString(key[0])
+				if kEntry:
+					kEntry.updateValue(key[1])
+				else:
+					_Env.put([ key ])
 
 	@staticmethod
 	def getEnv(key,defaultVal=None):
@@ -435,9 +460,6 @@ class env:
 						defaultVal = kEntry.getDefaultValue()
 
 			retVal = _Env.getVal(key,defaultVal)
-
-		if LOG.isEnabledFor(logging.DEBUG):
-			LOG.debug("GetValue Key: '%s' return: '%s'",(key,defaultVal),retVal)
 
 		return retVal
 
