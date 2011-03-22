@@ -6,6 +6,7 @@ import re
 from configuration.Configuration import env
 from utils import Utils
 from logger import RALogging
+from types import *
 
 LOG = RALogging.getLogger("parser-conf")
 
@@ -71,17 +72,22 @@ class ConfigParser:
 							parsedLine = self.postProcess(parsedLine,info)
 							if parsedLine:
 
-								if self.__cachedResults.has_key(parsedLine[0]) and self.isAllowToMultipleValues() :
+								entryType = type(parsedLine)
+								if entryType is ListType or entryType is TupleType:
+									if self.__cachedResults.has_key(parsedLine[0]) and self.isAllowToMultipleValues() :
 
-									values = self.__cachedResults.get(parsedLine[0])
+										values = self.__cachedResults.get(parsedLine[0])
 
-									if isinstance(values,basestring):
-										values = [values]
+										if isinstance(values,basestring):
+											values = [values]
 
-									values.append(parsedLine[1])
-									parsedLine[1] = values
+										values.append(parsedLine[1])
+										parsedLine[1] = values
 
-								self.__cachedResults.update([parsedLine])
+									self.__cachedResults.update([parsedLine])
+
+								elif entryType is DictType :
+									self.__cachedResults.update(parsedLine)
 
 								if self.__autoUpdateEnvironment == True:
 									env.putEnv(parsedLine)
@@ -97,6 +103,9 @@ class ConfigParser:
 	def parseLine(self,textLine,info):
 		return textLine
 
+	"""
+	   Method invoking line by line. This allows to testing/interfering/modifing the parsed result.
+	"""
 	def postProcess(self,results,info):
 
 		if LOG.isTrace():
